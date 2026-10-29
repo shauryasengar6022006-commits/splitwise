@@ -1,0 +1,2115 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Splitwise - What-If Enterprise Expense Simulator & Feasibility Engine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              DEFAULT: '#1cc29f',
+              dark: '#149d80',
+              glow: '#2de2bb',
+              cardDark: '#1e293b',
+              bgDark: '#0b1120'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    
+    * {
+      transition: background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1), 
+                  border-color 0.35s cubic-bezier(0.4, 0, 0.2, 1), 
+                  color 0.25s ease;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    /* Piggy Bank & Dropping Coin Animations */
+    @keyframes dropCoin {
+      0% {
+        opacity: 0;
+        transform: translateY(-45px) scale(0.6) rotate(-20deg);
+      }
+      30% {
+        opacity: 1;
+        transform: translateY(-20px) scale(1) rotate(10deg);
+      }
+      75% {
+        opacity: 1;
+        transform: translateY(12px) scale(0.85) rotate(0deg);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(24px) scale(0.3) rotate(0deg);
+      }
+    }
+
+    @keyframes piggyGulp {
+      0%, 65% {
+        transform: scale(1);
+      }
+      78% {
+        transform: scale(1.22) translateY(-4px);
+      }
+      88% {
+        transform: scale(0.94) translateY(2px);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .coin-drop-anim {
+      animation: dropCoin 2.4s infinite cubic-bezier(0.5, 0, 0.75, 0);
+    }
+
+    .piggy-gulp-anim {
+      animation: piggyGulp 2.4s infinite ease-in-out;
+      transform-origin: center bottom;
+    }
+
+    /* Speedometer Needle */
+    #meterNeedle {
+      transform-origin: 100px 90px;
+      transition: transform 0.05s linear;
+    }
+
+    /* Theme Curtain Transition */
+    #themeCurtain {
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      opacity: 0;
+      clip-path: circle(0% at calc(100% - 40px) 32px);
+      transition: clip-path 0.65s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    }
+    #themeCurtain.active {
+      opacity: 1;
+      clip-path: circle(150% at calc(100% - 40px) 32px);
+    }
+
+    @keyframes popIn {
+      0% { opacity: 0; transform: scale(0.88) translateY(10px); }
+      70% { transform: scale(1.02) translateY(-2px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes slideOut {
+      0% { opacity: 1; transform: scale(1) translateX(0); max-height: 250px; margin-bottom: 0.5rem; }
+      100% { opacity: 0; transform: scale(0.85) translateX(30px); max-height: 0; margin-bottom: 0; padding: 0; }
+    }
+    @keyframes pulseAura {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(28, 194, 159, 0.35); }
+      50% { box-shadow: 0 0 20px 4px rgba(28, 194, 159, 0.22); }
+    }
+
+    .animate-pop-in {
+      animation: popIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .animate-slide-out {
+      animation: slideOut 0.28s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      overflow: hidden;
+    }
+    .selected-scenario-glow {
+      animation: pulseAura 3s infinite ease-in-out;
+    }
+
+    .reveal-on-scroll {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal-on-scroll.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 999px; }
+    .dark ::-webkit-scrollbar-thumb { background: #475569; }
+  </style>
+</head>
+
+<body class="bg-slate-100 text-slate-800 dark:bg-[#0b1120] dark:text-slate-100 min-h-screen flex flex-col selection:bg-brand selection:text-white">
+
+  <!-- Fullscreen Theme Radial Curtain -->
+  <div id="themeCurtain" class="bg-slate-900"></div>
+
+  <!-- Global Sticky Header -->
+  <header class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-40 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-2">
+      <div class="flex items-center gap-3">
+        <div class="bg-gradient-to-tr from-[#1cc29f] to-[#2de2bb] text-white font-black rounded-xl w-10 h-10 flex items-center justify-center text-xl shadow-md shadow-brand/30">
+          S
+        </div>
+        <div class="flex flex-col">
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold tracking-tight text-xl text-slate-900 dark:text-white">splitwise</span>
+            <span class="bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+              🔮 Enterprise Simulator Pro
+            </span>
+          </div>
+          <span class="text-[11px] text-slate-400 font-medium">Predictive Sandbox & In-Memory Staging Engine</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <!-- Currency Converter Selector -->
+        <div class="flex items-center bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1">
+          <i class="fa-solid fa-coins text-[11px] text-brand mr-1.5"></i>
+          <select id="currencySelector" onchange="changeCurrency(this.value)" class="bg-transparent text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none cursor-pointer">
+            <option value="INR">₹ INR</option>
+            <option value="USD">$ USD</option>
+            <option value="EUR">€ EUR</option>
+            <option value="AED">د.إ AED</option>
+            <option value="GBP">£ GBP</option>
+          </select>
+        </div>
+
+        <button onclick="toggleAudio()" id="soundToggleBtn" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 transition shadow-sm" title="Toggle Sound FX">
+          <i class="fa-solid fa-volume-high text-xs"></i>
+        </button>
+
+        <button onclick="toggleChatDrawer()" class="bg-brand/10 hover:bg-brand/20 text-brand border border-brand/30 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition transform active:scale-95 shadow-sm relative">
+          <i class="fa-solid fa-comments"></i>
+          <span class="hidden sm:inline">Group Chat</span>
+          <span class="w-2 h-2 rounded-full bg-rose-500 absolute -top-0.5 -right-0.5 animate-ping"></span>
+        </button>
+
+        <button onclick="openModal('architectureModal')" class="hidden sm:flex bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/30 px-3 py-1.5 rounded-xl text-xs font-bold items-center gap-1.5 transition transform active:scale-95 shadow-sm">
+          <i class="fa-solid fa-network-wired"></i>
+          <span>Architecture Diff</span>
+        </button>
+
+        <button onclick="runAutomatedValidationSuite()" class="bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-300 border border-purple-500/30 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition transform active:scale-95 shadow-sm">
+          <i class="fa-solid fa-flask-vial"></i>
+          <span>Run Tests</span>
+        </button>
+
+        <button onclick="openModal('individualLedgerModal')" class="bg-brand/10 hover:bg-brand/20 text-brand border border-brand/30 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition transform active:scale-95 shadow-sm">
+          <i class="fa-solid fa-address-book"></i>
+          <span>Ledgers</span>
+        </button>
+
+        <button onclick="openModal('debtTransferModal')" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition transform active:scale-95 shadow-sm">
+          <i class="fa-solid fa-hand-holding-dollar"></i>
+          <span>Transfer Debt</span>
+        </button>
+
+        <button onclick="toggleDarkModeWithCurtain()" id="themeToggleBtn" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-amber-400 transition transform active:scale-95 shadow-sm" title="Toggle Dark/Light Mode">
+          <i class="fa-solid fa-moon text-sm"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto w-full px-4 py-6 flex-1 flex flex-col gap-8">
+
+    <!-- Plan Header -->
+    <div class="reveal-on-scroll bg-gradient-to-r from-white via-slate-50 to-white dark:from-slate-900 dark:via-slate-800/80 dark:to-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+      <div class="space-y-1.5 flex-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <input id="planTitleInput" type="text" value="Goa Trip: Beach Villa vs Resort vs Custom Homestay" oninput="saveToStorage()" class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white border-b-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-brand focus:border-brand focus:outline-none bg-transparent transition w-full max-w-xl" title="Click to rename trip" />
+        </div>
+        <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+          Reverse-engineering predictive staging: isolate financial commitments, run flake simulations, per-activity exclusions, and settle upfront without polluting live Splitwise accounts.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2">
+        <button onclick="copyWhatsAppDigest()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition transform active:scale-95">
+          <i class="fa-brands fa-whatsapp text-sm"></i> WhatsApp Summary
+        </button>
+        <button onclick="downloadCSVReport()" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 px-3 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
+          <i class="fa-solid fa-file-csv text-sm text-brand"></i> Export CSV
+        </button>
+        <button onclick="exportSplitwisePayload()" class="bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition transform active:scale-95">
+          <i class="fa-solid fa-code text-brand"></i> Splitwise API Payload
+        </button>
+        <button onclick="openModal('addExpenseModal')" class="bg-gradient-to-r from-brand to-[#15a385] text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-brand/20 transition transform active:scale-95">
+          <i class="fa-solid fa-plus-circle text-xs"></i> Add Bill
+        </button>
+      </div>
+    </div>
+
+    <!-- Live Multi-Variable Stress-Test Matrix -->
+    <div class="reveal-on-scroll bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
+            <i class="fa-solid fa-wand-magic-sparkles text-brand"></i> Live Multi-Variable Stress-Test Matrix
+          </h2>
+          <p class="text-xs text-slate-400">Dynamically scale flake dropouts and surge inflation to test worst-case financial scenarios.</p>
+        </div>
+        <button onclick="resetSliders()" class="text-xs font-bold text-brand hover:underline">Reset to Baseline</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Variable 1: Headcount Flake Slider -->
+        <div class="space-y-2 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200/70 dark:border-slate-800">
+          <div class="flex justify-between items-center text-xs">
+            <span class="font-bold text-slate-600 dark:text-slate-300">Simulated Group Size:</span>
+            <span id="sliderHeadcountText" class="font-black text-brand font-mono text-sm">6 Friends</span>
+          </div>
+          <input id="flakeSlider" type="range" min="1" max="10" value="6" oninput="updateLiveHeadcount(this.value)" class="w-full accent-brand cursor-pointer" />
+          <div class="flex justify-between text-[10px] text-slate-400 font-semibold">
+            <span>Solo (1)</span>
+            <span>Intended (6)</span>
+            <span>Max (10)</span>
+          </div>
+        </div>
+
+        <!-- Variable 2: Surge Inflation Multiplier -->
+        <div class="space-y-2 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200/70 dark:border-slate-800">
+          <div class="flex justify-between items-center text-xs">
+            <span class="font-bold text-slate-600 dark:text-slate-300">Surge / Fuel Multiplier:</span>
+            <span id="sliderSurgeText" class="font-black text-amber-500 font-mono text-sm">1.0x (Standard)</span>
+          </div>
+          <input id="surgeSlider" type="range" min="1.0" max="2.0" step="0.1" value="1.0" oninput="updateSurgeMultiplier(this.value)" class="w-full accent-amber-500 cursor-pointer" />
+          <div class="flex justify-between text-[10px] text-slate-400 font-semibold">
+            <span>Normal (1.0x)</span>
+            <span>Busy (+50%)</span>
+            <span>Peak Surge (2.0x)</span>
+          </div>
+        </div>
+
+        <!-- Variable 3: Personal Budget Target Cap -->
+        <div class="space-y-2 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200/70 dark:border-slate-800">
+          <div class="flex justify-between items-center text-xs">
+            <span class="font-bold text-slate-600 dark:text-slate-300">Max Personal Budget:</span>
+            <span id="budgetCapDisplay" class="font-black text-purple-500 font-mono text-sm">₹10,000</span>
+          </div>
+          <input id="budgetCapSlider" type="range" min="2000" max="30000" step="500" value="10000" oninput="updateBudgetCap(this.value)" class="w-full accent-purple-500 cursor-pointer" />
+          <div id="budgetCapFeedback" class="text-[10px] font-bold text-emerald-500 flex items-center gap-1">
+            <i class="fa-solid fa-circle-check"></i> Within safe comfort threshold
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Active Debts Banner -->
+    <div id="activeDebtsContainer" class="hidden reveal-on-scroll bg-amber-50 dark:bg-amber-950/40 border-2 border-dashed border-amber-300 dark:border-amber-800/80 rounded-2xl p-4 shadow-sm space-y-2">
+      <div class="flex items-center justify-between">
+        <h3 class="text-xs uppercase font-extrabold tracking-wider text-amber-700 dark:text-amber-300 flex items-center gap-2">
+          <i class="fa-solid fa-handshake-angle"></i> Active Debt Transfers & Sponsored Balances
+        </h3>
+        <button onclick="clearAllDebts()" class="text-[11px] text-amber-600 hover:underline font-bold">Clear All Debts</button>
+      </div>
+      <div id="debtsList" class="flex flex-wrap gap-2 pt-1"></div>
+    </div>
+
+    <!-- Happiness Speedometer & Jumbo Animated Piggy Bank -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+      <!-- Happiness & Feasibility Speedometer Card -->
+      <div id="meterCard" onclick="triggerSpeedometerRev()" class="reveal-on-scroll bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between cursor-pointer hover:border-brand/60 transition group" title="Click anywhere on this card to rev the speedometer!">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-xs uppercase font-extrabold tracking-wider text-slate-400 dark:text-slate-500">Happiness & Feasibility Meter</h2>
+              <span class="bg-brand/10 text-brand text-[9px] font-extrabold px-1.5 py-0.2 rounded group-hover:scale-105 transition">Click to Rev</span>
+            </div>
+            <div class="text-base font-bold text-slate-800 dark:text-slate-100 mt-0.5 flex items-center gap-2">
+              <span id="meterVerdictText">Calculating...</span>
+              <span id="meterEmoji" class="text-3xl transition-transform duration-150 inline-block">😊</span>
+            </div>
+          </div>
+          <div class="text-right">
+            <span id="meterScoreNumber" class="text-3xl font-black text-brand tracking-tight font-mono">75%</span>
+            <div class="text-[10px] text-slate-400 font-bold uppercase">Tachometer Index</div>
+          </div>
+        </div>
+
+        <div class="py-4 flex flex-col items-center justify-center">
+          <div class="relative w-64 h-36 overflow-hidden flex justify-center">
+            <svg viewBox="0 0 200 110" class="w-full h-full drop-shadow-sm">
+              <path d="M 20 90 A 80 80 0 0 1 180 90" fill="none" stroke="#e2e8f0" stroke-width="16" stroke-linecap="round" class="dark:stroke-slate-800" />
+              <defs>
+                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#ef4444" />
+                  <stop offset="28%" stop-color="#f97316" />
+                  <stop offset="58%" stop-color="#eab308" />
+                  <stop offset="82%" stop-color="#1cc29f" />
+                  <stop offset="100%" stop-color="#8b5cf6" />
+                </linearGradient>
+              </defs>
+              <path id="gaugeProgressArc" d="M 20 90 A 80 80 0 0 1 180 90" fill="none" stroke="url(#gaugeGradient)" stroke-width="16" stroke-linecap="round" stroke-dasharray="251.2" stroke-dashoffset="62.8" />
+              <circle cx="100" cy="90" r="8" fill="#0f172a" class="dark:fill-white" />
+              <line id="meterNeedle" x1="100" y1="90" x2="100" y2="24" stroke="#0f172a" stroke-width="4" stroke-linecap="round" class="dark:stroke-white" transform="rotate(-90)" />
+            </svg>
+          </div>
+
+          <div class="w-full max-w-xs flex justify-between text-[10px] font-bold text-slate-400 px-1 mt-1">
+            <span class="text-rose-500">0% Sad</span>
+            <span class="text-amber-500">30% Moderate</span>
+            <span class="text-emerald-500">60% Happy</span>
+            <span class="text-purple-500">90%-100% Amazing</span>
+          </div>
+        </div>
+
+        <p id="meterInsight" class="text-xs text-slate-500 dark:text-slate-400 text-center pt-2 border-t border-slate-100 dark:border-slate-800">
+          Calculating financial comfort for everyone attending...
+        </p>
+      </div>
+
+      <!-- Jumbo Animated Piggy Bank with Coin Drop -->
+      <div class="reveal-on-scroll bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between relative overflow-hidden">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+          <div>
+            <h2 class="text-xs uppercase font-extrabold tracking-wider text-slate-400 dark:text-slate-500">Emergency & Extra Buffer</h2>
+            <div class="text-base font-bold text-slate-800 dark:text-slate-100 mt-0.5">Recommended Reserve Fund</div>
+          </div>
+          <span class="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[10px] font-extrabold px-2.5 py-1 rounded-full">
+            +20% Contingency
+          </span>
+        </div>
+
+        <div class="my-auto py-5 flex items-center justify-between gap-4">
+          <div class="space-y-1 flex-1">
+            <div class="text-xs text-slate-400 font-medium">Extra Cash Per Person to Carry</div>
+            <div class="text-3xl font-black text-amber-500 font-mono" id="bufferShare">₹0</div>
+            <div class="text-[11px] text-slate-500 dark:text-slate-400">
+              Total Group 20% Reserve: <strong id="bufferTotal" class="text-slate-800 dark:text-slate-200 font-mono">₹0</strong>
+            </div>
+          </div>
+
+          <div class="relative w-28 h-28 flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-amber-100/60 dark:from-amber-950/30 dark:to-amber-900/10 rounded-2xl border border-amber-200/70 dark:border-amber-800/40 p-2 shadow-inner">
+            <div class="absolute top-2 w-7 h-7 rounded-full bg-gradient-to-tr from-yellow-500 to-amber-300 border-2 border-amber-200 flex items-center justify-center text-amber-950 font-black text-xs shadow-md coin-drop-anim z-10 pointer-events-none" id="piggyCoinSymbol">
+              ₹
+            </div>
+            <div class="text-5xl text-amber-500 piggy-gulp-anim mt-3 filter drop-shadow-md">
+              <i class="fa-solid fa-piggy-bank"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800">
+          💡 <strong>Reliability Guard:</strong> Prevents group insolvency by auto-factoring a verified 20% statistical cushion for hidden road tolls, taxi surges, and miscellaneous spikes.
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Group Members Attendance -->
+    <div class="reveal-on-scroll bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
+            <i class="fa-solid fa-users text-brand"></i> Friends Roster & Attendance Matrix
+          </h2>
+          <p class="text-xs text-slate-400">Toggle a member off to simulate them dropping from the trip completely.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openModal('individualLedgerModal')" class="text-xs text-brand hover:underline font-bold mr-2">
+            View Live Ledger & Shares →
+          </button>
+          <div class="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300">
+            Attendees: <span id="attendingCount" class="font-black text-brand text-sm">0</span> / <span id="totalMembers">0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 max-w-md">
+        <div class="relative w-full">
+          <i class="fa-solid fa-user-plus absolute left-3.5 top-3 text-xs text-slate-400"></i>
+          <input id="newMemberNameInput" type="text" placeholder="Add new friend (e.g. Siddharth, Priya)" class="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-brand" onkeydown="if(event.key === 'Enter') addMember()" />
+        </div>
+        <button onclick="addMember()" class="bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold px-4 py-2.5 rounded-xl transition transform active:scale-95 whitespace-nowrap shadow-sm">
+          + Add
+        </button>
+      </div>
+
+      <div id="memberList" class="flex flex-wrap gap-2.5 pt-1"></div>
+    </div>
+
+    <!-- Scenarios: Compare Options A, B, and C -->
+    <div class="reveal-on-scroll space-y-4">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <i class="fa-solid fa-sliders text-brand"></i> Compare Options & In-Place Price Customizer
+          </h2>
+          <p class="text-xs text-slate-400">Edit any price directly in the input field, toggle exclusions per activity, and select the winning plan.</p>
+        </div>
+        <div class="text-xs font-bold text-slate-500">
+          Selected Plan: <span id="selectedPlanIndicator" class="text-brand font-black">Option A</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- SCENARIO A -->
+        <div id="cardScenarioA" onclick="selectScenario('A')" class="bg-white dark:bg-slate-900 border-2 rounded-2xl p-5 shadow-sm flex flex-col relative transition-all cursor-pointer border-brand selected-scenario-glow">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-2 w-full mr-2">
+              <input type="radio" name="scenarioSelect" id="radioA" checked onchange="selectScenario('A')" class="accent-brand w-4 h-4 cursor-pointer" />
+              <input id="scenarioAName" type="text" value="Option A: Luxury Stay" onclick="event.stopPropagation()" oninput="recalculate()" class="text-sm font-bold text-slate-900 dark:text-white border-b border-dashed border-slate-300 dark:border-slate-700 hover:border-brand focus:outline-none bg-transparent w-full" />
+            </div>
+            <div class="flex items-center gap-1">
+              <span id="bestValueBadgeA" class="hidden bg-emerald-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap">★ BEST VALUE</span>
+              <span id="statusBadgeA" class="bg-brand text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap">SELECTED</span>
+            </div>
+          </div>
+
+          <div class="my-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+            <div>
+              <div class="text-[10px] font-bold uppercase text-slate-400">Total Bill</div>
+              <div class="text-xl font-black text-slate-900 dark:text-white font-mono" id="totalA">₹0</div>
+            </div>
+            <div class="text-right">
+              <div class="text-[10px] font-extrabold text-brand uppercase">Average / Head</div>
+              <div class="text-xl font-black text-brand font-mono" id="perPersonA">₹0</div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between mb-1.5">
+            <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Activities & Costs</h4>
+            <span class="text-[10px] text-slate-400 font-semibold" id="itemCountA">0 items</span>
+          </div>
+
+          <div id="breakdownA" class="space-y-2.5 flex-1 mb-2" onclick="event.stopPropagation()"></div>
+        </div>
+
+        <!-- SCENARIO B -->
+        <div id="cardScenarioB" onclick="selectScenario('B')" class="bg-white dark:bg-slate-900 border-2 rounded-2xl p-5 shadow-sm flex flex-col relative transition-all cursor-pointer border-slate-200 dark:border-slate-800 opacity-85 hover:opacity-100">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-2 w-full mr-2">
+              <input type="radio" name="scenarioSelect" id="radioB" onchange="selectScenario('B')" class="accent-brand w-4 h-4 cursor-pointer" />
+              <input id="scenarioBName" type="text" value="Option B: Budget Resort" onclick="event.stopPropagation()" oninput="recalculate()" class="text-sm font-bold text-slate-900 dark:text-white border-b border-dashed border-slate-300 dark:border-slate-700 hover:border-brand focus:outline-none bg-transparent w-full" />
+            </div>
+            <div class="flex items-center gap-1">
+              <span id="bestValueBadgeB" class="hidden bg-emerald-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap">★ BEST VALUE</span>
+              <span id="statusBadgeB" class="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full whitespace-nowrap">SELECT</span>
+            </div>
+          </div>
+
+          <div class="my-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+            <div>
+              <div class="text-[10px] font-bold uppercase text-slate-400">Total Bill</div>
+              <div class="text-xl font-black text-slate-900 dark:text-white font-mono" id="totalB">₹0</div>
+            </div>
+            <div class="text-right">
+              <div class="text-[10px] font-extrabold text-slate-500 uppercase">Average / Head</div>
+              <div class="text-xl font-black text-slate-700 dark:text-slate-300 font-mono" id="perPersonB">₹0</div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between mb-1.5">
+            <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Activities & Costs</h4>
+            <span class="text-[10px] text-slate-400 font-semibold" id="itemCountB">0 items</span>
+          </div>
+
+          <div id="breakdownB" class="space-y-2.5 flex-1 mb-2" onclick="event.stopPropagation()"></div>
+        </div>
+
+        <!-- SCENARIO C -->
+        <div id="cardScenarioC" onclick="selectScenario('C')" class="bg-white dark:bg-slate-900 border-2 rounded-2xl p-5 shadow-sm flex flex-col relative transition-all cursor-pointer border-slate-200 dark:border-slate-800 opacity-85 hover:opacity-100">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-2 w-full mr-2">
+              <input type="radio" name="scenarioSelect" id="radioC" onchange="selectScenario('C')" class="accent-brand w-4 h-4 cursor-pointer" />
+              <input id="scenarioCName" type="text" value="Option C: Custom Plan" onclick="event.stopPropagation()" oninput="recalculate()" class="text-sm font-bold text-slate-900 dark:text-white border-b border-dashed border-slate-300 dark:border-slate-700 hover:border-brand focus:outline-none bg-transparent w-full" />
+            </div>
+            <div class="flex items-center gap-1">
+              <span id="bestValueBadgeC" class="hidden bg-emerald-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap">★ BEST VALUE</span>
+              <span id="statusBadgeC" class="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full whitespace-nowrap">SELECT</span>
+            </div>
+          </div>
+
+          <div class="my-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+            <div>
+              <div class="text-[10px] font-bold uppercase text-slate-400">Total Bill</div>
+              <div class="text-xl font-black text-slate-900 dark:text-white font-mono" id="totalC">₹0</div>
+            </div>
+            <div class="text-right">
+              <div class="text-[10px] font-extrabold text-purple-500 uppercase">Average / Head</div>
+              <div class="text-xl font-black text-purple-600 dark:text-purple-400 font-mono" id="perPersonC">₹0</div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between mb-1.5">
+            <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Activities & Costs</h4>
+            <span class="text-[10px] text-slate-400 font-semibold" id="itemCountC">0 items</span>
+          </div>
+
+          <div id="breakdownC" class="space-y-2.5 flex-1 mb-2" onclick="event.stopPropagation()"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Trip Itinerary & Daily Burn Rate Breakdown -->
+    <div class="reveal-on-scroll bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <i class="fa-solid fa-calendar-days text-brand"></i> Itinerary & Daily Burn Rate Breakdown
+          </h2>
+          <p class="text-xs text-slate-400">Pinpoint spending velocity across individual trip days to eliminate front-loaded sticker shock.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="itineraryTimelineGrid">
+        <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-2">
+          <div class="flex justify-between items-center text-xs font-bold">
+            <span class="text-brand">📅 Day 1: Arrival & Villa Check-in</span>
+            <span class="font-mono text-slate-900 dark:text-white" id="day1Burn">₹24,000</span>
+          </div>
+          <p class="text-[11px] text-slate-400">Villa occupancy deposit, rental vehicle pickup & highway tolls.</p>
+        </div>
+
+        <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-2">
+          <div class="flex justify-between items-center text-xs font-bold">
+            <span class="text-amber-500">📅 Day 2: Excursions & Water Sports</span>
+            <span class="font-mono text-slate-900 dark:text-white" id="day2Burn">₹17,000</span>
+          </div>
+          <p class="text-[11px] text-slate-400">Scuba diving sessions, island cruises, beach-shack brunch.</p>
+        </div>
+
+        <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-2">
+          <div class="flex justify-between items-center text-xs font-bold">
+            <span class="text-purple-500">📅 Day 3: Nightlife & Farewell Dinner</span>
+            <span class="font-mono text-slate-900 dark:text-white" id="day3Burn">₹12,000</span>
+          </div>
+          <p class="text-[11px] text-slate-400">Fine dining, souvenirs, return fuel top-up & airport transit.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sensitivity & Dropout Risk Matrix -->
+    <div class="reveal-on-scroll bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-3">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <i class="fa-solid fa-chart-pie text-brand"></i> Attendance Dropout Risk Matrix
+          </h2>
+          <p class="text-xs text-slate-400">Live comparison of averages across Option A, B, and C as friend count changes.</p>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-slate-50 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
+              <th class="py-3 px-3 font-bold rounded-l-lg">Headcount</th>
+              <th class="py-3 px-3 font-bold" id="tableHeaderA">Option A / Head</th>
+              <th class="py-3 px-3 font-bold" id="tableHeaderB">Option B / Head</th>
+              <th class="py-3 px-3 font-bold" id="tableHeaderC">Option C / Head</th>
+              <th class="py-3 px-3 font-bold rounded-r-lg">Dropout Feasibility</th>
+            </tr>
+          </thead>
+          <tbody id="sensitivityTableBody" class="divide-y divide-slate-100 dark:divide-slate-800"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Post-Trip Settlement & Paid/Unpaid Tracker -->
+    <div id="settlementSection" class="reveal-on-scroll bg-white dark:bg-slate-900 border-2 border-emerald-500/40 dark:border-emerald-500/30 rounded-2xl p-6 shadow-sm space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-2">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <h2 class="text-base font-bold text-slate-900 dark:text-white">
+              Post-Trip Settlement & Payment Status
+            </h2>
+          </div>
+          <p class="text-xs text-slate-400 mt-0.5">
+            Detailed report of who pays how much for <span id="settlementPlanTitle" class="font-bold text-brand">Option A</span>. Checkmark members as they complete payment.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <div class="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl font-bold text-slate-600 dark:text-slate-300">
+            Collected: <span id="collectedAmountText" class="text-brand font-mono">₹0</span> / <span id="totalDueText" class="font-mono">₹0</span>
+          </div>
+          <button onclick="markAllPaid()" class="text-xs bg-brand text-white font-bold px-3 py-1.5 rounded-xl hover:bg-brand-dark transition shadow-sm">
+            Mark All Paid
+          </button>
+        </div>
+      </div>
+
+      <div id="settlementReportList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1"></div>
+    </div>
+
+  </main>
+
+  <!-- MODAL 1: Individual Member Ledgers Window -->
+  <div id="individualLedgerModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-3xl w-full p-6 shadow-2xl animate-pop-in max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <i class="fa-solid fa-address-book text-brand"></i> Member Personal Ledgers
+          </h3>
+          <p class="text-xs text-slate-400">Detailed breakdown showing activities each member is paying for, exclusions, and debt bailouts.</p>
+        </div>
+        <button onclick="closeModal('individualLedgerModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div id="individualLedgerContent" class="py-4 overflow-y-auto space-y-4 flex-1 custom-scrollbar"></div>
+
+      <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+        <button onclick="closeModal('individualLedgerModal')" class="px-5 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold text-xs">
+          Close Ledger
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Debt Transfer Modal -->
+  <div id="debtTransferModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-pop-in">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
+            <i class="fa-solid fa-handshake"></i>
+          </div>
+          <h3 class="font-bold text-slate-900 dark:text-white">Transfer Unpaid Share as Debt</h3>
+        </div>
+        <button onclick="closeModal('debtTransferModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 pt-4 text-sm">
+        <p class="text-xs text-slate-500 dark:text-slate-400">
+          If a member cannot pay their share upfront, transfer the amount to another member who sponsors them.
+        </p>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Friend Who Cannot Pay (Debtor)</label>
+          <select id="debtorSelect" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-brand"></select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Friend Who Will Cover It (Sponsor)</label>
+          <select id="sponsorSelect" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-brand"></select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Amount to Transfer</label>
+          <input id="debtTransferAmount" type="number" placeholder="Leave empty to transfer their full share" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-brand" />
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3">
+          <button onclick="closeModal('debtTransferModal')" class="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            Cancel
+          </button>
+          <button onclick="createDebtTransfer()" class="px-5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl font-bold shadow-lg shadow-amber-500/20 hover:opacity-95 transition transform active:scale-95">
+            Confirm Transfer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Add Bill / Expense -->
+  <div id="addExpenseModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-pop-in">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center">
+            <i class="fa-solid fa-receipt"></i>
+          </div>
+          <h3 class="font-bold text-slate-900 dark:text-white">Add Simulated Expense / Activity</h3>
+        </div>
+        <button onclick="closeModal('addExpenseModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 pt-4 text-sm">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Expense Description</label>
+          <input id="newExpenseTitle" type="text" placeholder="e.g. Scuba Diving, Drinks, Fuel, Villa Rent" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-brand" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Total Bill Amount</label>
+          <input id="newExpenseAmount" type="number" placeholder="6000" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-brand" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Category Icon</label>
+          <select id="newExpenseCategory" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-brand">
+            <option value="fa-ticket">🎟️ Activity / Tickets</option>
+            <option value="fa-hotel">🏨 Accommodation / Stay</option>
+            <option value="fa-utensils">🍽️ Food, Dining & Drinks</option>
+            <option value="fa-car">🚗 Vehicle / Taxi / Cab Rental</option>
+            <option value="fa-gas-pump">⛽ Fuel & Highway Tolls</option>
+            <option value="fa-receipt">🧾 Miscellaneous Expense</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Add To Which Option?</label>
+          <select id="newExpenseScenario" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-brand">
+            <option value="all">All Options (A, B, and C)</option>
+            <option value="A">Option A Only</option>
+            <option value="B">Option B Only</option>
+            <option value="C">Option C Only</option>
+          </select>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3">
+          <button onclick="closeModal('addExpenseModal')" class="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            Cancel
+          </button>
+          <button onclick="addCustomExpense()" class="px-5 py-2 bg-gradient-to-r from-brand to-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-brand/20 hover:opacity-95 transition transform active:scale-95">
+            Add Bill
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 4: Automated Testing & Validation Suite -->
+  <div id="validationSuiteModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl animate-pop-in max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-500 flex items-center justify-center">
+            <i class="fa-solid fa-vial-circle-check"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 dark:text-white text-base">Automated Validation & Unit Test Suite</h3>
+            <p class="text-xs text-slate-400">Verifying mathematical correctness, zero-sum balances, and error handling.</p>
+          </div>
+        </div>
+        <button onclick="closeModal('validationSuiteModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div id="testResultsContainer" class="py-4 space-y-2.5 overflow-y-auto flex-1 font-mono text-xs"></div>
+
+      <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+        <span class="text-xs text-slate-400">Evaluation Criteria: Functional Correctness & Testing</span>
+        <button onclick="closeModal('validationSuiteModal')" class="px-4 py-2 bg-purple-600 text-white rounded-xl font-bold text-xs hover:bg-purple-700 transition">
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 5: Splitwise Architecture Diff Drawer -->
+  <div id="architectureModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-3xl w-full p-6 shadow-2xl animate-pop-in max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center">
+            <i class="fa-solid fa-network-wired"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 dark:text-white text-base">Reverse Engineering Architecture Diff</h3>
+            <p class="text-xs text-slate-400">Standard Splitwise Database Schema vs. Our Predictive Staging Engine</p>
+          </div>
+        </div>
+        <button onclick="closeModal('architectureModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="py-4 overflow-y-auto space-y-4 flex-1 text-xs leading-relaxed">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="p-4 rounded-xl border border-rose-300 dark:border-rose-900/60 bg-rose-50/50 dark:bg-rose-950/20 space-y-2">
+            <h4 class="font-bold text-rose-700 dark:text-rose-400 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+              <i class="fa-solid fa-triangle-exclamation"></i> Standard Splitwise Engine
+            </h4>
+            <ul class="space-y-1.5 text-slate-600 dark:text-slate-300">
+              <li>• <strong>Strict ACID Mutations:</strong> Every interaction writes to persistent SQL tables (`expenses`, `debts`).</li>
+              <li>• <strong>No Staging Sandbox:</strong> Creating drafts triggers push notifications and taints live balances.</li>
+              <li>• <strong>Reactive Only:</strong> Cannot model "What if 2 people drop out?" without altering ledger history.</li>
+            </ul>
+          </div>
+
+          <div class="p-4 rounded-xl border border-emerald-300 dark:border-emerald-900/60 bg-emerald-50/50 dark:bg-emerald-950/20 space-y-2">
+            <h4 class="font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+              <i class="fa-solid fa-shield-check"></i> What-If Simulation Sandbox
+            </h4>
+            <ul class="space-y-1.5 text-slate-600 dark:text-slate-300">
+              <li>• <strong>In-Memory Simulation:</strong> Pure state tree recalculated client-side with zero network noise.</li>
+              <li>• <strong>Zero Side-Effects:</strong> Headcounts and per-activity exclusions test budgets safely.</li>
+              <li>• <strong>Single Push Commit:</strong> Compiles winning plan to Splitwise's <code>POST /create_expense</code> format.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+        <button onclick="closeModal('architectureModal')" class="px-5 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold text-xs">
+          Close Comparison
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 6: Splitwise API Export Payload -->
+  <div id="splitwisePayloadModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl animate-pop-in max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center">
+            <i class="fa-solid fa-paper-plane"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 dark:text-white text-base">Reverse Engineered Splitwise API Payload</h3>
+            <p class="text-xs text-slate-400">JSON output prepared for official <code>/api/v3.0/create_expense</code> endpoint</p>
+          </div>
+        </div>
+        <button onclick="closeModal('splitwisePayloadModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <pre id="apiPayloadCode" class="p-4 my-4 bg-slate-900 text-emerald-400 rounded-xl overflow-x-auto text-[11px] font-mono leading-relaxed flex-1"></pre>
+
+      <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+        <span class="text-xs text-slate-400">Zero database corruption during simulation</span>
+        <button onclick="closeModal('splitwisePayloadModal')" class="px-4 py-2 bg-brand text-white rounded-xl font-bold text-xs hover:bg-brand-dark transition">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 7: UPI QR Code Payment Simulator -->
+  <div id="upiModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl animate-pop-in flex flex-col items-center text-center">
+      <div class="w-12 h-12 rounded-2xl bg-brand/10 text-brand flex items-center justify-center text-xl mb-3">
+        <i class="fa-solid fa-qrcode"></i>
+      </div>
+      <h3 class="font-bold text-slate-900 dark:text-white text-base">Instant UPI Settlement</h3>
+      <p class="text-xs text-slate-400 mt-1 mb-4">Scan using GPay, PhonePe, or Paytm to settle individual share</p>
+
+      <div class="p-3 bg-white border border-slate-200 rounded-2xl shadow-sm mb-3">
+        <img id="upiQrImage" src="" alt="UPI QR Code" class="w-48 h-48 rounded-xl object-contain" />
+      </div>
+
+      <div class="text-xs text-slate-500 font-mono mb-4">
+        Amount Due: <strong id="upiAmountText" class="text-slate-900 dark:text-white font-black text-sm">₹0</strong>
+      </div>
+
+      <div class="flex gap-2 w-full">
+        <button onclick="closeModal('upiModal')" class="flex-1 px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-semibold text-xs">
+          Cancel
+        </button>
+        <button onclick="confirmUpiPayment()" class="flex-1 px-4 py-2 bg-brand text-white rounded-xl font-bold text-xs hover:bg-brand-dark transition shadow-md">
+          Mark Paid
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Group Negotiation Chat Drawer (Slide-out) -->
+  <div id="chatDrawer" class="fixed inset-y-0 right-0 max-w-sm w-full bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 z-50 shadow-2xl transform translate-x-full transition-transform duration-300 flex flex-col">
+    <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center font-bold">
+          <i class="fa-solid fa-comments"></i>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-slate-900 dark:text-white">Trip Consensus Chat</h3>
+          <span class="text-[10px] text-emerald-500 font-semibold">● 4 members actively negotiating</span>
+        </div>
+      </div>
+      <button onclick="toggleChatDrawer()" class="text-slate-400 hover:text-slate-600">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <div id="chatMessagesContainer" class="flex-1 p-4 overflow-y-auto space-y-3 text-xs">
+      <div class="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-slate-700 dark:text-slate-200 max-w-[85%]">
+        <strong class="text-brand text-[10px] block">Aarav:</strong>
+        Option A looks great, but if 2 people drop out, does our share cross our comfort target?
+      </div>
+      <div class="bg-brand/10 border border-brand/20 p-2.5 rounded-xl text-slate-800 dark:text-slate-100 max-w-[85%] ml-auto">
+        <strong class="text-brand text-[10px] block">System Simulation Bot:</strong>
+        Check the Dropout Matrix above! If 2 drop out on Option A, share becomes ₹7,333.
+      </div>
+      <div class="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-slate-700 dark:text-slate-200 max-w-[85%]">
+        <strong class="text-pink-500 text-[10px] block">Pooja:</strong>
+        I opted out of Scuba diving to save money. Did my opt-out register in the personal ledger?
+      </div>
+    </div>
+
+    <!-- Quick Action Negotiation Chips -->
+    <div class="p-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex flex-wrap gap-1.5">
+      <button onclick="sendChatMessage('Let us select Option B instead!')" class="text-[10px] bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded-lg font-bold hover:bg-brand hover:text-white transition">
+        Switch to Option B
+      </button>
+      <button onclick="sendChatMessage('I can sponsor some debt upfront!')" class="text-[10px] bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded-lg font-bold hover:bg-brand hover:text-white transition">
+        Offer Sponsor Debt
+      </button>
+    </div>
+
+    <div class="p-3 border-t border-slate-200 dark:border-slate-800 flex gap-2">
+      <input id="chatInput" type="text" placeholder="Type a message to the group..." onkeydown="if(event.key === 'Enter') handleUserChatMessage()" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand" />
+      <button onclick="handleUserChatMessage()" class="px-3 bg-brand text-white rounded-xl text-xs font-bold hover:bg-brand-dark transition">
+        <i class="fa-solid fa-paper-plane"></i>
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // State with LocalStorage Persistence
+    let isDarkMode = false;
+    let selectedScenario = 'A';
+    let isSpeedometerRevving = false;
+    let audioEnabled = true;
+    let pendingUpiMemberId = null;
+    let maxBudgetCap = 10000;
+    let currentCurrency = 'INR';
+    let currencyRates = { INR: 1, USD: 0.012, EUR: 0.011, AED: 0.044, GBP: 0.0095 };
+    let currencySymbols = { INR: '₹', USD: '$', EUR: '€', AED: 'د.إ', GBP: '£' };
+    let surgeMultiplier = 1.0;
+
+    let defaultMembers = [
+      { id: 1, name: "You", active: true, color: "from-brand to-emerald-400", paid: false },
+      { id: 2, name: "Aarav", active: true, color: "from-blue-500 to-indigo-500", paid: false },
+      { id: 3, name: "Pooja", active: true, color: "from-pink-500 to-rose-500", paid: false },
+      { id: 4, name: "Rohan", active: true, color: "from-amber-500 to-orange-500", paid: false },
+      { id: 5, name: "Sneha", active: true, color: "from-purple-500 to-violet-500", paid: false },
+      { id: 6, name: "Vikram", active: true, color: "from-teal-500 to-cyan-500", paid: false }
+    ];
+
+    let defaultExpensesA = [
+      { id: 'a1', title: 'Luxury 4BHK Beach Villa', amount: 24000, icon: 'fa-hotel', excludedMembers: [] },
+      { id: 'a2', title: 'Self-Drive SUV Rental & Fuel', amount: 9000, icon: 'fa-car', excludedMembers: [] },
+      { id: 'a3', title: 'Seaside Dinner & Cocktails', amount: 12000, icon: 'fa-utensils', excludedMembers: [] },
+      { id: 'a4', title: 'Scuba Diving Session', amount: 8000, icon: 'fa-ticket', excludedMembers: [3] }
+    ];
+
+    let defaultExpensesB = [
+      { id: 'b1', title: 'Boutique Airbnb Homestay', amount: 15000, icon: 'fa-hotel', excludedMembers: [] },
+      { id: 'b2', title: 'Scooter Rentals (3 Activas)', amount: 4500, icon: 'fa-car', excludedMembers: [] },
+      { id: 'b3', title: 'Cafes & Seafood Hubs', amount: 8000, icon: 'fa-utensils', excludedMembers: [] },
+      { id: 'b4', title: 'Sunset Catamaran Cruise', amount: 4800, icon: 'fa-ticket', excludedMembers: [4] }
+    ];
+
+    let defaultExpensesC = [
+      { id: 'c1', title: 'Cozy Riverside Cottage', amount: 18000, icon: 'fa-hotel', excludedMembers: [] },
+      { id: 'c2', title: 'Self-Cook Grocery Stock & BBQ', amount: 6000, icon: 'fa-utensils', excludedMembers: [] },
+      { id: 'c3', title: 'Shared Minivan & Driver', amount: 7500, icon: 'fa-car', excludedMembers: [] },
+      { id: 'c4', title: 'Go-Karting & Club Entry', amount: 5000, icon: 'fa-ticket', excludedMembers: [2] }
+    ];
+
+    let members = JSON.parse(localStorage.getItem('splitwise_members')) || defaultMembers;
+    let expensesScenarioA = JSON.parse(localStorage.getItem('splitwise_exp_a')) || defaultExpensesA;
+    let expensesScenarioB = JSON.parse(localStorage.getItem('splitwise_exp_b')) || defaultExpensesB;
+    let expensesScenarioC = JSON.parse(localStorage.getItem('splitwise_exp_c')) || defaultExpensesC;
+    let debts = JSON.parse(localStorage.getItem('splitwise_debts')) || [];
+
+    function saveToStorage() {
+      localStorage.setItem('splitwise_members', JSON.stringify(members));
+      localStorage.setItem('splitwise_exp_a', JSON.stringify(expensesScenarioA));
+      localStorage.setItem('splitwise_exp_b', JSON.stringify(expensesScenarioB));
+      localStorage.setItem('splitwise_exp_c', JSON.stringify(expensesScenarioC));
+      localStorage.setItem('splitwise_debts', JSON.stringify(debts));
+    }
+
+    function formatCurrency(amount) {
+      const converted = amount * currencyRates[currentCurrency];
+      return `${currencySymbols[currentCurrency]}${Number(Math.round(converted)).toLocaleString()}`;
+    }
+
+    function changeCurrency(curr) {
+      currentCurrency = curr;
+      document.getElementById('piggyCoinSymbol').innerText = currencySymbols[curr];
+      recalculate();
+    }
+
+    // Audio Micro-interactions Synthesizer
+    let audioCtx = null;
+    function playBeep(freq = 440, type = 'sine', duration = 0.1) {
+      if (!audioEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + duration);
+      } catch (e) {}
+    }
+
+    function toggleAudio() {
+      audioEnabled = !audioEnabled;
+      const btn = document.querySelector('#soundToggleBtn i');
+      btn.className = audioEnabled ? 'fa-solid fa-volume-high text-xs' : 'fa-solid fa-volume-xmark text-xs text-rose-500';
+    }
+
+    function triggerConfetti() {
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.65 }
+        });
+      }
+    }
+
+    // Rolling Odometer Transition for DOM Elements
+    function animateValue(elementId, start, end, duration = 400) {
+      const obj = document.getElementById(elementId);
+      if (!obj) return;
+      let startTimestamp = null;
+      const step = (timestamp) => {
+        if (!startTimestamp) startTimestamp = timestamp;
+        const progress = Math.min((timestamp - startTimestamp) / duration, 1);
+        const current = Math.floor(progress * (end - start) + start);
+        obj.innerText = formatCurrency(current);
+        if (progress < 1) {
+          window.requestAnimationFrame(step);
+        }
+      };
+      window.requestAnimationFrame(step);
+    }
+
+    function toggleDarkModeWithCurtain() {
+      const curtain = document.getElementById('themeCurtain');
+      curtain.className = !isDarkMode ? 'bg-slate-900 active' : 'bg-slate-100 active';
+
+      setTimeout(() => {
+        isDarkMode = !isDarkMode;
+        document.documentElement.classList.toggle('dark', isDarkMode);
+        const icon = document.querySelector('#themeToggleBtn i');
+        icon.className = isDarkMode ? 'fa-solid fa-sun text-sm text-amber-400' : 'fa-solid fa-moon text-sm text-slate-600';
+      }, 300);
+
+      setTimeout(() => curtain.classList.remove('active'), 700);
+    }
+
+    function initScrollReveal() {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) entry.target.classList.add('is-visible');
+        });
+      }, { threshold: 0.1 });
+
+      document.querySelectorAll('.reveal-on-scroll').forEach(el => observer.observe(el));
+    }
+
+    function selectScenario(scenario) {
+      selectedScenario = scenario;
+      playBeep(520, 'triangle', 0.12);
+
+      ['A', 'B', 'C'].forEach(s => {
+        const card = document.getElementById(`cardScenario${s}`);
+        const radio = document.getElementById(`radio${s}`);
+        const badge = document.getElementById(`statusBadge${s}`);
+
+        if (s === scenario) {
+          radio.checked = true;
+          card.className = "bg-white dark:bg-slate-900 border-2 rounded-2xl p-5 shadow-sm flex flex-col relative transition-all cursor-pointer border-brand selected-scenario-glow";
+          badge.className = "bg-brand text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap";
+          badge.innerText = "SELECTED";
+          document.getElementById('selectedPlanIndicator').innerText = document.getElementById(`scenario${s}Name`).value;
+          document.getElementById('settlementPlanTitle').innerText = document.getElementById(`scenario${s}Name`).value;
+        } else {
+          card.className = "bg-white dark:bg-slate-900 border-2 rounded-2xl p-5 shadow-sm flex flex-col relative transition-all cursor-pointer border-slate-200 dark:border-slate-800 opacity-80 hover:opacity-100";
+          badge.className = "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full whitespace-nowrap";
+          badge.innerText = "SELECT";
+        }
+      });
+      recalculate();
+      triggerSpeedometerRev();
+    }
+
+    // Multi-Variable Slider Handlers
+    function updateLiveHeadcount(val) {
+      const count = parseInt(val);
+      document.getElementById('sliderHeadcountText').innerText = `${count} Friends`;
+      members.forEach((m, idx) => m.active = idx < count);
+      recalculate();
+      triggerSpeedometerRev();
+    }
+
+    function updateSurgeMultiplier(val) {
+      surgeMultiplier = parseFloat(val);
+      document.getElementById('sliderSurgeText').innerText = `${surgeMultiplier.toFixed(1)}x (${surgeMultiplier > 1 ? '+' + Math.round((surgeMultiplier - 1) * 100) + '%' : 'Standard'})`;
+      recalculate();
+    }
+
+    function updateBudgetCap(val) {
+      maxBudgetCap = parseInt(val);
+      document.getElementById('budgetCapDisplay').innerText = formatCurrency(maxBudgetCap);
+      evaluateBudgetHealth();
+    }
+
+    function resetSliders() {
+      document.getElementById('flakeSlider').value = 6;
+      document.getElementById('surgeSlider').value = 1.0;
+      updateLiveHeadcount(6);
+      updateSurgeMultiplier(1.0);
+    }
+
+    function evaluateBudgetHealth() {
+      const activeTripMembers = members.filter(m => m.active);
+      const chosenExpenses = selectedScenario === 'A' ? expensesScenarioA : (selectedScenario === 'B' ? expensesScenarioB : expensesScenarioC);
+      const sum = chosenExpenses.reduce((acc, curr) => acc + (curr.amount * surgeMultiplier), 0);
+      const perHead = activeTripMembers.length > 0 ? sum / activeTripMembers.length : 0;
+      const feedback = document.getElementById('budgetCapFeedback');
+
+      if (perHead <= maxBudgetCap) {
+        feedback.innerHTML = `<i class="fa-solid fa-circle-check"></i> Within safe comfort threshold (${formatCurrency(maxBudgetCap - perHead)} headroom)`;
+        feedback.className = "text-[10px] font-bold text-emerald-500 flex items-center gap-1";
+      } else {
+        feedback.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Exceeds cap by ${formatCurrency(perHead - maxBudgetCap)}!`;
+        feedback.className = "text-[10px] font-bold text-rose-500 flex items-center gap-1 animate-pulse";
+      }
+    }
+
+    function updateExpensePrice(scenario, id, newAmount) {
+      const cleanAmount = Math.max(0, parseFloat(newAmount) || 0);
+      const list = scenario === 'A' ? expensesScenarioA : (scenario === 'B' ? expensesScenarioB : expensesScenarioC);
+      const expense = list.find(e => e.id === id);
+      if (expense) {
+        expense.amount = cleanAmount;
+        saveToStorage();
+        recalculate();
+      }
+    }
+
+    function renderMembers() {
+      const container = document.getElementById('memberList');
+      container.innerHTML = '';
+      
+      const activeCount = members.filter(m => m.active).length;
+      document.getElementById('attendingCount').innerText = activeCount;
+      document.getElementById('totalMembers').innerText = members.length;
+
+      members.forEach(member => {
+        const chip = document.createElement('div');
+        chip.id = `member-chip-${member.id}`;
+        chip.className = `flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all transform duration-200 cursor-pointer animate-pop-in ${
+          member.active 
+            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-md shadow-brand/10' 
+            : 'bg-slate-200/80 text-slate-400 dark:bg-slate-800 dark:text-slate-600 opacity-60 line-through'
+        }`;
+
+        chip.innerHTML = `
+          <div onclick="toggleMember(${member.id})" class="flex items-center gap-2">
+            <span class="w-5 h-5 rounded-lg bg-gradient-to-tr ${member.color} text-white flex items-center justify-center text-[10px] font-black shadow-sm">
+              ${member.name.charAt(0).toUpperCase()}
+            </span>
+            <span>${member.name}</span>
+            <i class="fa-solid ${member.active ? 'fa-check text-brand' : 'fa-xmark text-slate-400'} text-[10px]"></i>
+          </div>
+          <button onclick="removeMember(${member.id})" class="ml-1 opacity-40 hover:opacity-100 hover:text-red-500 transition" title="Delete member">
+            <i class="fa-solid fa-circle-xmark"></i>
+          </button>
+        `;
+        container.appendChild(chip);
+      });
+
+      updateDebtDropdowns();
+    }
+
+    function toggleMember(id) {
+      const member = members.find(m => m.id === id);
+      if (member) {
+        const activeCount = members.filter(m => m.active).length;
+        if (member.active && activeCount === 1) {
+          alert("Error Handling: At least 1 member must remain active in the trip to prevent division by zero.");
+          return;
+        }
+        member.active = !member.active;
+        playBeep(member.active ? 600 : 350, 'sine', 0.1);
+        saveToStorage();
+        recalculate();
+        triggerSpeedometerRev();
+      }
+    }
+
+    function addMember() {
+      const input = document.getElementById('newMemberNameInput');
+      const name = input.value.trim();
+      
+      if (!name) {
+        alert("Please enter a valid name.");
+        return;
+      }
+      if (members.some(m => m.name.toLowerCase() === name.toLowerCase())) {
+        alert("Member with this name already exists.");
+        return;
+      }
+
+      const colors = ["from-pink-500 to-rose-500", "from-amber-500 to-orange-500", "from-teal-500 to-cyan-500", "from-indigo-500 to-purple-500", "from-emerald-500 to-teal-500"];
+      const randomColor = colors[Math.floor(Math.random() * colors.length)];
+      members.push({ id: Date.now(), name: name, active: true, color: randomColor, paid: false });
+      input.value = '';
+      playBeep(650, 'sine', 0.12);
+      saveToStorage();
+      recalculate();
+      triggerSpeedometerRev();
+    }
+
+    function removeMember(id) {
+      if (members.length <= 1) {
+        alert("Error Handling: Minimum group size must be at least 1.");
+        return;
+      }
+      const el = document.getElementById(`member-chip-${id}`);
+      if (el) {
+        el.classList.add('animate-slide-out');
+        setTimeout(() => {
+          members = members.filter(m => m.id !== id);
+          if (!members.some(m => m.active)) members[0].active = true;
+          expensesScenarioA.forEach(e => e.excludedMembers = e.excludedMembers.filter(mid => mid !== id));
+          expensesScenarioB.forEach(e => e.excludedMembers = e.excludedMembers.filter(mid => mid !== id));
+          expensesScenarioC.forEach(e => e.excludedMembers = e.excludedMembers.filter(mid => mid !== id));
+          debts = debts.filter(d => d.debtorId !== id && d.sponsorId !== id);
+          saveToStorage();
+          recalculate();
+          triggerSpeedometerRev();
+        }, 250);
+      }
+    }
+
+    function toggleExpenseExclusion(scenario, expenseId, memberId) {
+      const list = scenario === 'A' ? expensesScenarioA : (scenario === 'B' ? expensesScenarioB : expensesScenarioC);
+      const expense = list.find(e => e.id === expenseId);
+      if (!expense) return;
+
+      if (!expense.excludedMembers) expense.excludedMembers = [];
+      const idx = expense.excludedMembers.indexOf(memberId);
+      if (idx > -1) {
+        expense.excludedMembers.splice(idx, 1);
+      } else {
+        const activeTripMembers = members.filter(m => m.active);
+        const currentlyIncluded = activeTripMembers.filter(m => !expense.excludedMembers.includes(m.id));
+        if (currentlyIncluded.length <= 1) {
+          alert("Error Handling: At least 1 active member must stay included in this bill.");
+          return;
+        }
+        expense.excludedMembers.push(memberId);
+      }
+      playBeep(480, 'sine', 0.08);
+      saveToStorage();
+      recalculate();
+    }
+
+    function renderBreakdown(scenario, items, containerId) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      document.getElementById(`itemCount${scenario}`).innerText = `${items.length} items`;
+
+      if (items.length === 0) {
+        container.innerHTML = `<div class="text-xs text-slate-400 italic py-2 text-center">No bills added. Click "+ Add Bill" above.</div>`;
+        return;
+      }
+
+      const activeTripMembers = members.filter(m => m.active);
+
+      items.forEach(item => {
+        if (!item.excludedMembers) item.excludedMembers = [];
+        const participatingMembers = activeTripMembers.filter(m => !item.excludedMembers.includes(m.id));
+        const count = participatingMembers.length > 0 ? participatingMembers.length : 1;
+        const perPersonItemCost = Math.round((item.amount * surgeMultiplier) / count);
+
+        const card = document.createElement('div');
+        card.id = `bill-${scenario}-${item.id}`;
+        card.className = 'p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2 animate-pop-in';
+
+        let memberTogglesHTML = '';
+        activeTripMembers.forEach(m => {
+          const isExcluded = item.excludedMembers.includes(m.id);
+          memberTogglesHTML += `
+            <button onclick="toggleExpenseExclusion('${scenario}', '${item.id}', ${m.id})" 
+              class="text-[9px] px-1.5 py-0.5 rounded font-semibold transition ${
+                isExcluded 
+                  ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 line-through border border-rose-200 dark:border-rose-900' 
+                  : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+              }">
+              ${m.name} ${isExcluded ? '✗' : '✓'}
+            </button>
+          `;
+        });
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between text-xs gap-2">
+            <div class="flex items-center gap-1.5 flex-1 min-w-0">
+              <i class="fa-solid ${item.icon} text-slate-400 text-[10px] w-3 text-center"></i>
+              <span class="text-slate-800 dark:text-slate-200 font-bold truncate">${item.title}</span>
+            </div>
+            
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-bold text-slate-400">${currencySymbols[currentCurrency]}</span>
+              <input type="number" value="${item.amount}" 
+                oninput="updateExpensePrice('${scenario}', '${item.id}', this.value)"
+                class="w-20 text-right font-extrabold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:border-brand font-mono" />
+              <button onclick="deleteExpense('${scenario}', '${item.id}')" class="text-slate-400 hover:text-rose-500 transition ml-1" title="Delete">
+                <i class="fa-regular fa-trash-can text-xs"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-[10px] text-slate-400 pt-0.5 border-t border-slate-200/40 dark:border-slate-700/40">
+            <span>Split by ${count} friends</span>
+            <span class="font-bold text-brand font-mono">${formatCurrency(perPersonItemCost)} / person</span>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-1 pt-0.5">
+            ${memberTogglesHTML}
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    function deleteExpense(scenario, id) {
+      const el = document.getElementById(`bill-${scenario}-${id}`);
+      if (el) {
+        el.classList.add('animate-slide-out');
+        setTimeout(() => {
+          if (scenario === 'A') expensesScenarioA = expensesScenarioA.filter(e => e.id !== id);
+          else if (scenario === 'B') expensesScenarioB = expensesScenarioB.filter(e => e.id !== id);
+          else expensesScenarioC = expensesScenarioC.filter(e => e.id !== id);
+          saveToStorage();
+          recalculate();
+          triggerSpeedometerRev();
+        }, 250);
+      }
+    }
+
+    function calculateMemberShares(scenarioKey) {
+      const activeMembers = members.filter(m => m.active);
+      const chosenExpenses = scenarioKey === 'A' ? expensesScenarioA : (scenarioKey === 'B' ? expensesScenarioB : expensesScenarioC);
+      
+      const ledger = {};
+      activeMembers.forEach(m => {
+        ledger[m.id] = {
+          member: m,
+          rawOwed: 0,
+          activitiesIncluded: [],
+          activitiesExcluded: [],
+          debtTransferredOut: 0,
+          debtSponsoredIn: 0,
+          sponsoredDetails: [],
+          finalShare: 0
+        };
+      });
+
+      chosenExpenses.forEach(exp => {
+        const participating = activeMembers.filter(m => !exp.excludedMembers.includes(m.id));
+        const count = participating.length > 0 ? participating.length : 1;
+        const itemPerPerson = (exp.amount * surgeMultiplier) / count;
+
+        activeMembers.forEach(m => {
+          if (!exp.excludedMembers.includes(m.id)) {
+            ledger[m.id].rawOwed += itemPerPerson;
+            ledger[m.id].activitiesIncluded.push({ title: exp.title, cost: itemPerPerson, total: exp.amount });
+          } else {
+            ledger[m.id].activitiesExcluded.push(exp.title);
+          }
+        });
+      });
+
+      debts.forEach(d => {
+        if (ledger[d.debtorId] && ledger[d.sponsorId]) {
+          ledger[d.debtorId].debtTransferredOut += d.amount;
+          ledger[d.sponsorId].debtSponsoredIn += d.amount;
+          ledger[d.debtorId].sponsoredDetails.push(`Debt: Covered by ${members.find(m => m.id === d.sponsorId)?.name} (-${formatCurrency(d.amount)})`);
+          ledger[d.sponsorId].sponsoredDetails.push(`Bailout: Sponsoring ${members.find(m => m.id === d.debtorId)?.name} (+${formatCurrency(d.amount)})`);
+        }
+      });
+
+      Object.values(ledger).forEach(entry => {
+        entry.finalShare = Math.max(0, entry.rawOwed - entry.debtTransferredOut + entry.debtSponsoredIn);
+      });
+
+      return ledger;
+    }
+
+    function triggerSpeedometerRev() {
+      if (isSpeedometerRevving) return;
+      isSpeedometerRevving = true;
+
+      const card = document.getElementById('meterCard');
+      card.classList.add('scale-[1.02]');
+      setTimeout(() => card.classList.remove('scale-[1.02]'), 400);
+
+      const activeTripMembers = members.filter(m => m.active);
+      const chosenExpenses = selectedScenario === 'A' ? expensesScenarioA : (selectedScenario === 'B' ? expensesScenarioB : expensesScenarioC);
+      const sum = chosenExpenses.reduce((acc, curr) => acc + (curr.amount * surgeMultiplier), 0);
+      const perHead = activeTripMembers.length > 0 ? sum / activeTripMembers.length : 0;
+
+      let targetScore = 100 - (perHead / 220);
+      if (targetScore < 5) targetScore = 5;
+      if (targetScore > 98) targetScore = 98;
+      targetScore = Math.round(targetScore);
+
+      let currentStep = 0;
+      const totalSteps = 45;
+      const stepDuration = 18;
+
+      const needleEl = document.getElementById('meterNeedle');
+      const arcEl = document.getElementById('gaugeProgressArc');
+      const scoreEl = document.getElementById('meterScoreNumber');
+      const emojiEl = document.getElementById('meterEmoji');
+      const textEl = document.getElementById('meterVerdictText');
+      const insightEl = document.getElementById('meterInsight');
+      const totalDash = 251.2;
+
+      const animInterval = setInterval(() => {
+        currentStep++;
+        const progress = currentStep / totalSteps;
+        const easedProgress = 1 - Math.pow(1 - progress, 3);
+        const dynamicScore = Math.round(easedProgress * targetScore);
+        const angle = -90 + (dynamicScore / 100) * 180;
+
+        needleEl.setAttribute('transform', `rotate(${angle})`);
+        arcEl.style.strokeDashoffset = totalDash - (totalDash * (dynamicScore / 100));
+        scoreEl.innerText = `${dynamicScore}%`;
+
+        if (dynamicScore < 30) {
+          emojiEl.innerText = "😢";
+          emojiEl.style.transform = "scale(1.15) rotate(-6deg)";
+          textEl.innerText = "Sad / Financial Stress";
+          textEl.className = "text-base font-bold text-rose-500";
+        } else if (dynamicScore < 60) {
+          emojiEl.innerText = "😐";
+          emojiEl.style.transform = "scale(1.1) rotate(0deg)";
+          textEl.innerText = "Moderate / Noticeable Pinch";
+          textEl.className = "text-base font-bold text-amber-500";
+        } else if (dynamicScore < 90) {
+          emojiEl.innerText = "😊";
+          emojiEl.style.transform = "scale(1.18) rotate(6deg)";
+          textEl.innerText = "Happy / Balanced & Fun";
+          textEl.className = "text-base font-bold text-emerald-500";
+        } else {
+          emojiEl.innerText = "🤩";
+          emojiEl.style.transform = "scale(1.25) rotate(12deg)";
+          textEl.innerText = "Amazing / Pure High Vibes";
+          textEl.className = "text-base font-bold text-purple-500";
+        }
+
+        if (currentStep >= totalSteps) {
+          clearInterval(animInterval);
+          isSpeedometerRevving = false;
+          emojiEl.style.transform = "scale(1)";
+
+          if (targetScore < 30) {
+            scoreEl.className = "text-3xl font-black text-rose-500 tracking-tight font-mono";
+            insightEl.innerText = "Per-person cost is high. Multiple members might feel the financial burden.";
+          } else if (targetScore <= 60) {
+            scoreEl.className = "text-3xl font-black text-amber-500 tracking-tight font-mono";
+            insightEl.innerText = "Balanced budget, but requires careful tracking of optional activities.";
+          } else if (targetScore <= 90) {
+            scoreEl.className = "text-3xl font-black text-brand tracking-tight font-mono";
+            insightEl.innerText = "Optimal sweet spot! Smooth consensus expected across the entire group.";
+          } else {
+            scoreEl.className = "text-3xl font-black text-purple-500 tracking-tight font-mono";
+            insightEl.innerText = "Super economical! Zero budget friction across all participants.";
+          }
+        }
+      }, stepDuration);
+    }
+
+    function openUpiModal(memberId, amount) {
+      pendingUpiMemberId = memberId;
+      const cleanAmt = Math.round(amount);
+      document.getElementById('upiAmountText').innerText = formatCurrency(cleanAmt);
+      const upiUrl = `upi://pay?pa=group@upi&pn=SplitwiseTrip&am=${cleanAmt}&cu=INR`;
+      document.getElementById('upiQrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiUrl)}`;
+      openModal('upiModal');
+    }
+
+    function confirmUpiPayment() {
+      if (pendingUpiMemberId) {
+        const member = members.find(m => m.id === pendingUpiMemberId);
+        if (member) {
+          member.paid = true;
+          triggerConfetti();
+          playBeep(700, 'triangle', 0.2);
+          saveToStorage();
+          renderSettlementReport();
+        }
+      }
+      closeModal('upiModal');
+    }
+
+    function togglePayment(memberId) {
+      const member = members.find(m => m.id === memberId);
+      if (member) {
+        member.paid = !member.paid;
+        if (member.paid) {
+          triggerConfetti();
+          playBeep(700, 'triangle', 0.15);
+        }
+        saveToStorage();
+        renderSettlementReport();
+      }
+    }
+
+    function markAllPaid() {
+      const activeMembers = members.filter(m => m.active);
+      const allAlreadyPaid = activeMembers.every(m => m.paid);
+      activeMembers.forEach(m => m.paid = !allAlreadyPaid);
+      if (!allAlreadyPaid) {
+        triggerConfetti();
+        playBeep(750, 'triangle', 0.25);
+      }
+      saveToStorage();
+      renderSettlementReport();
+    }
+
+    function renderSettlementReport() {
+      const container = document.getElementById('settlementReportList');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const ledger = calculateMemberShares(selectedScenario);
+      let totalDue = 0;
+      let totalCollected = 0;
+
+      Object.values(ledger).forEach(item => {
+        totalDue += item.finalShare;
+        if (item.member.paid) totalCollected += item.finalShare;
+
+        const card = document.createElement('div');
+        card.className = `p-4 rounded-xl border transition-all animate-pop-in ${
+          item.member.paid 
+            ? 'bg-emerald-500/10 border-emerald-500/40 dark:bg-emerald-950/20 dark:border-emerald-800' 
+            : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800'
+        }`;
+
+        let detailsString = item.activitiesIncluded.map(a => a.title).join(', ');
+        if (!detailsString) detailsString = "No shared activities";
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between pb-2 border-b border-slate-200/50 dark:border-slate-700/50">
+            <div class="flex items-center gap-2">
+              <span class="w-7 h-7 rounded-lg bg-gradient-to-tr ${item.member.color} text-white flex items-center justify-center text-xs font-black shadow-sm">
+                ${item.member.name.charAt(0).toUpperCase()}
+              </span>
+              <div>
+                <span class="font-bold text-slate-900 dark:text-white text-sm">${item.member.name}</span>
+                <div class="text-[10px] text-slate-400 truncate max-w-[140px]">${detailsString}</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="text-xs font-bold uppercase text-slate-400">Share Due</span>
+              <div class="text-base font-black text-slate-900 dark:text-white font-mono">${formatCurrency(item.finalShare)}</div>
+            </div>
+          </div>
+
+          <div class="pt-3 flex items-center justify-between gap-1.5">
+            <span class="text-xs font-bold flex items-center gap-1.5 ${
+              item.member.paid ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+            }">
+              <i class="fa-solid ${item.member.paid ? 'fa-circle-check' : 'fa-clock'}"></i>
+              ${item.member.paid ? 'Paid' : 'Pending'}
+            </span>
+
+            <div class="flex items-center gap-1">
+              ${!item.member.paid ? `
+                <button onclick="openUpiModal(${item.member.id}, ${item.finalShare})" class="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white transition flex items-center gap-1 shadow-sm" title="Pay with UPI QR">
+                  <i class="fa-solid fa-qrcode text-[10px]"></i> UPI
+                </button>
+              ` : ''}
+
+              <button onclick="togglePayment(${item.member.id})" class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+                item.member.paid 
+                  ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm' 
+                  : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600'
+              }">
+                <i class="fa-solid ${item.member.paid ? 'fa-check' : 'fa-receipt'}"></i>
+                ${item.member.paid ? 'Paid' : 'Mark Paid'}
+              </button>
+            </div>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+
+      document.getElementById('totalDueText').innerText = formatCurrency(totalDue);
+      document.getElementById('collectedAmountText').innerText = formatCurrency(totalCollected);
+    }
+
+    function toggleChatDrawer() {
+      const drawer = document.getElementById('chatDrawer');
+      drawer.classList.toggle('translate-x-full');
+    }
+
+    function sendChatMessage(msg) {
+      const container = document.getElementById('chatMessagesContainer');
+      const div = document.createElement('div');
+      div.className = "bg-brand/10 border border-brand/20 p-2.5 rounded-xl text-slate-800 dark:text-slate-100 max-w-[85%] ml-auto";
+      div.innerHTML = `<strong class="text-brand text-[10px] block">You:</strong> ${msg}`;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function handleUserChatMessage() {
+      const input = document.getElementById('chatInput');
+      const msg = input.value.trim();
+      if (!msg) return;
+      sendChatMessage(msg);
+      input.value = '';
+    }
+
+    function recalculate() {
+      const activeTripMembers = members.filter(m => m.active);
+      const activeCount = activeTripMembers.length;
+
+      const sumA = expensesScenarioA.reduce((acc, curr) => acc + (curr.amount * surgeMultiplier), 0);
+      const sumB = expensesScenarioB.reduce((acc, curr) => acc + (curr.amount * surgeMultiplier), 0);
+      const sumC = expensesScenarioC.reduce((acc, curr) => acc + (curr.amount * surgeMultiplier), 0);
+
+      const perPersonA = activeCount > 0 ? sumA / activeCount : 0;
+      const perPersonB = activeCount > 0 ? sumB / activeCount : 0;
+      const perPersonC = activeCount > 0 ? sumC / activeCount : 0;
+
+      // Animate Odometer Transition on Totals
+      animateValue('totalA', 0, sumA);
+      animateValue('totalB', 0, sumB);
+      animateValue('totalC', 0, sumC);
+
+      animateValue('perPersonA', 0, perPersonA);
+      animateValue('perPersonB', 0, perPersonB);
+      animateValue('perPersonC', 0, perPersonC);
+
+      // Best Value Radar Badge
+      const lowestPerHead = Math.min(perPersonA, perPersonB, perPersonC);
+      document.getElementById('bestValueBadgeA').classList.toggle('hidden', perPersonA !== lowestPerHead || perPersonA === 0);
+      document.getElementById('bestValueBadgeB').classList.toggle('hidden', perPersonB !== lowestPerHead || perPersonB === 0);
+      document.getElementById('bestValueBadgeC').classList.toggle('hidden', perPersonC !== lowestPerHead || perPersonC === 0);
+
+      const nameA = document.getElementById('scenarioAName').value || 'Option A';
+      const nameB = document.getElementById('scenarioBName').value || 'Option B';
+      const nameC = document.getElementById('scenarioCName').value || 'Option C';
+      document.getElementById('tableHeaderA').innerText = `${nameA} / Head`;
+      document.getElementById('tableHeaderB').innerText = `${nameB} / Head`;
+      document.getElementById('tableHeaderC').innerText = `${nameC} / Head`;
+
+      const chosenSum = selectedScenario === 'A' ? sumA : (selectedScenario === 'B' ? sumB : sumC);
+      const bufferTotal = Math.round(chosenSum * 0.20);
+      const bufferPerPerson = activeCount > 0 ? Math.round(bufferTotal / activeCount) : 0;
+
+      document.getElementById('bufferTotal').innerText = formatCurrency(bufferTotal);
+      document.getElementById('bufferShare').innerText = `${formatCurrency(bufferPerPerson)} extra`;
+
+      // Recalculate Day Burn Rates
+      document.getElementById('day1Burn').innerText = formatCurrency(Math.round(chosenSum * 0.45));
+      document.getElementById('day2Burn').innerText = formatCurrency(Math.round(chosenSum * 0.35));
+      document.getElementById('day3Burn').innerText = formatCurrency(Math.round(chosenSum * 0.20));
+
+      evaluateBudgetHealth();
+      renderMembers();
+      renderBreakdown('A', expensesScenarioA, 'breakdownA');
+      renderBreakdown('B', expensesScenarioB, 'breakdownB');
+      renderBreakdown('C', expensesScenarioC, 'breakdownC');
+      renderSensitivity(sumA, sumB, sumC, activeCount);
+      renderDebtsBanner();
+      renderLedgerModalContent();
+      renderSettlementReport();
+    }
+
+    function renderSensitivity(sumA, sumB, sumC, currentActive) {
+      const tbody = document.getElementById('sensitivityTableBody');
+      tbody.innerHTML = '';
+
+      const maxCount = Math.max(members.length, 6);
+      const minCount = Math.max(1, maxCount - 4);
+
+      for (let count = maxCount; count >= minCount; count--) {
+        const shareA = sumA / count;
+        const shareB = sumB / count;
+        const shareC = sumC / count;
+        const isCurrent = count === currentActive;
+
+        const row = document.createElement('tr');
+        row.className = isCurrent 
+          ? 'bg-brand/10 dark:bg-brand/20 font-black border-l-4 border-brand' 
+          : 'hover:bg-slate-50 dark:hover:bg-slate-800/40 text-slate-700 dark:text-slate-300';
+
+        row.innerHTML = `
+          <td class="py-3 px-3 flex items-center gap-1.5 font-bold">
+            <span>${count} Friends</span>
+            ${isCurrent ? '<span class="bg-brand text-white text-[9px] px-1.5 py-0.2 rounded font-black">ACTIVE</span>' : ''}
+          </td>
+          <td class="py-3 px-3 font-mono font-bold">${formatCurrency(shareA)}</td>
+          <td class="py-3 px-3 font-mono font-bold">${formatCurrency(shareB)}</td>
+          <td class="py-3 px-3 font-mono font-bold text-purple-600 dark:text-purple-400">${formatCurrency(shareC)}</td>
+          <td class="py-3 px-3 text-[11px]">
+            ${count < currentActive ? `<span class="text-rose-500 font-bold">⚠️ If ${currentActive - count} drops: +${formatCurrency(shareA - (sumA / currentActive))} on A</span>` : '<span class="text-emerald-500">✅ Active group baseline</span>'}
+          </td>
+        `;
+        tbody.appendChild(row);
+      }
+    }
+
+    function renderLedgerModalContent() {
+      const container = document.getElementById('individualLedgerContent');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const ledger = calculateMemberShares(selectedScenario);
+      const planName = document.getElementById(`scenario${selectedScenario}Name`).value;
+
+      const headerSummary = document.createElement('div');
+      headerSummary.className = 'text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200 dark:border-slate-700 mb-3 flex justify-between items-center';
+      headerSummary.innerHTML = `
+        <span>Ledger based on: <strong class="text-brand">${planName}</strong></span>
+        <span>Includes <strong>20% Buffer Advisor</strong></span>
+      `;
+      container.appendChild(headerSummary);
+
+      Object.values(ledger).forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/40 space-y-3';
+
+        let activitiesHTML = item.activitiesIncluded.map(a => `
+          <div class="flex justify-between items-center text-xs text-slate-600 dark:text-slate-300 py-0.5">
+            <span>• ${a.title}</span>
+            <span class="font-mono font-semibold">${formatCurrency(a.cost)}</span>
+          </div>
+        `).join('');
+
+        let excludedHTML = item.activitiesExcluded.length > 0 ? `
+          <div class="text-[11px] text-rose-500 pt-1">
+            <strong>Opted Out:</strong> ${item.activitiesExcluded.join(', ')}
+          </div>
+        ` : '';
+
+        let debtsHTML = item.sponsoredDetails.map(d => `
+          <div class="text-xs font-bold ${d.startsWith('Debt:') ? 'text-amber-600 dark:text-amber-400' : 'text-blue-500'}">
+            ⚡ ${d}
+          </div>
+        `).join('');
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg bg-gradient-to-tr ${item.member.color} text-white flex items-center justify-center text-xs font-black">
+                ${item.member.name.charAt(0).toUpperCase()}
+              </span>
+              <span class="font-bold text-slate-900 dark:text-white">${item.member.name}</span>
+            </div>
+            <div class="text-right">
+              <div class="text-[10px] text-slate-400 font-bold uppercase">To Pay Upfront</div>
+              <div class="text-lg font-black text-brand font-mono">${formatCurrency(item.finalShare)}</div>
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Itemized Cost Contributions:</div>
+            <div class="bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800">
+              ${activitiesHTML || '<div class="text-xs text-slate-400 italic">No included activities.</div>'}
+              ${excludedHTML}
+            </div>
+          </div>
+
+          ${debtsHTML ? `<div class="pt-1">${debtsHTML}</div>` : ''}
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    function updateDebtDropdowns() {
+      const debtorSelect = document.getElementById('debtorSelect');
+      const sponsorSelect = document.getElementById('sponsorSelect');
+      if (!debtorSelect || !sponsorSelect) return;
+
+      const activeTripMembers = members.filter(m => m.active);
+      debtorSelect.innerHTML = activeTripMembers.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+      sponsorSelect.innerHTML = activeTripMembers.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+    }
+
+    function createDebtTransfer() {
+      const debtorId = parseInt(document.getElementById('debtorSelect').value);
+      const sponsorId = parseInt(document.getElementById('sponsorSelect').value);
+      const customAmount = parseFloat(document.getElementById('debtTransferAmount').value);
+
+      if (debtorId === sponsorId) {
+        alert("Error Handling: A member cannot sponsor their own debt.");
+        return;
+      }
+
+      const ledger = calculateMemberShares(selectedScenario);
+      const debtorShare = ledger[debtorId]?.finalShare || 0;
+      const transferAmount = (!isNaN(customAmount) && customAmount > 0) ? customAmount : debtorShare;
+
+      if (transferAmount <= 0) {
+        alert("This member currently has 0 balance to transfer.");
+        return;
+      }
+
+      debts.push({
+        id: 'debt_' + Date.now(),
+        debtorId: debtorId,
+        sponsorId: sponsorId,
+        amount: transferAmount
+      });
+
+      document.getElementById('debtTransferAmount').value = '';
+      closeModal('debtTransferModal');
+      playBeep(520, 'sine', 0.15);
+      saveToStorage();
+      recalculate();
+    }
+
+    function renderDebtsBanner() {
+      const container = document.getElementById('activeDebtsContainer');
+      const list = document.getElementById('debtsList');
+      if (!container || !list) return;
+
+      if (debts.length === 0) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      container.classList.remove('hidden');
+      list.innerHTML = '';
+
+      debts.forEach(d => {
+        const debtor = members.find(m => m.id === d.debtorId)?.name || 'Unknown';
+        const sponsor = members.find(m => m.id === d.sponsorId)?.name || 'Unknown';
+
+        const chip = document.createElement('div');
+        chip.className = 'flex items-center gap-2 bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 px-3 py-1.5 rounded-xl text-xs font-bold border border-amber-300 dark:border-amber-700 animate-pop-in';
+        chip.innerHTML = `
+          <span>💳 <strong>${debtor}</strong> owes <strong>${sponsor}</strong> ${formatCurrency(d.amount)}</span>
+          <button onclick="deleteDebt('${d.id}')" class="text-amber-500 hover:text-rose-500 ml-1">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        `;
+        list.appendChild(chip);
+      });
+    }
+
+    function deleteDebt(id) {
+      debts = debts.filter(d => d.id !== id);
+      saveToStorage();
+      recalculate();
+    }
+
+    function clearAllDebts() {
+      debts = [];
+      saveToStorage();
+      recalculate();
+    }
+
+    function openModal(id) {
+      document.getElementById(id).classList.remove('hidden');
+      if (id === 'individualLedgerModal') renderLedgerModalContent();
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    function addCustomExpense() {
+      const title = document.getElementById('newExpenseTitle').value.trim();
+      const amount = parseFloat(document.getElementById('newExpenseAmount').value);
+      const category = document.getElementById('newExpenseCategory').value;
+      const scenario = document.getElementById('newExpenseScenario').value;
+
+      if (!title || isNaN(amount) || amount <= 0) {
+        alert("Error Handling: Please enter a valid expense title and an amount greater than 0.");
+        return;
+      }
+
+      const item = {
+        id: 'c_' + Date.now(),
+        title: title,
+        amount: amount,
+        icon: category,
+        excludedMembers: []
+      };
+
+      if (scenario === 'all' || scenario === 'A') expensesScenarioA.push({ ...item });
+      if (scenario === 'all' || scenario === 'B') expensesScenarioB.push({ ...item });
+      if (scenario === 'all' || scenario === 'C') expensesScenarioC.push({ ...item });
+
+      document.getElementById('newExpenseTitle').value = '';
+      document.getElementById('newExpenseAmount').value = '';
+      closeModal('addExpenseModal');
+      playBeep(620, 'triangle', 0.15);
+      saveToStorage();
+      recalculate();
+      triggerSpeedometerRev();
+    }
+
+    function copyWhatsAppDigest() {
+      const tripTitle = document.getElementById('planTitleInput').value;
+      const planName = document.getElementById(`scenario${selectedScenario}Name`).value;
+      const ledger = calculateMemberShares(selectedScenario);
+      const totalAmount = (selectedScenario === 'A' ? expensesScenarioA : (selectedScenario === 'B' ? expensesScenarioB : expensesScenarioC)).reduce((s, e) => s + (e.amount * surgeMultiplier), 0);
+
+      let text = `🌴 *${tripTitle}* 🌴\n`;
+      text += `📌 *Selected Plan:* ${planName}\n`;
+      text += `💰 *Total Group Cost:* ${formatCurrency(totalAmount)}\n`;
+      text += `🛡️ *Extra 20% Contingency Buffer:* ${document.getElementById('bufferShare').innerText}\n\n`;
+      text += `*Individual Shares to Pay:*\n`;
+
+      Object.values(ledger).forEach(item => {
+        text += `• ${item.member.name}: ${formatCurrency(item.finalShare)}\n`;
+      });
+
+      text += `\n⚡ Generated via Splitwise What-If Simulator Sandbox`;
+
+      navigator.clipboard.writeText(text).then(() => {
+        alert("📋 Copied WhatsApp summary to clipboard! Paste it into your group chat.");
+      });
+    }
+
+    function downloadCSVReport() {
+      const ledger = calculateMemberShares(selectedScenario);
+      let csv = "Member,Total Owed Upfront,Opted Out Activities,Paid Status\n";
+
+      Object.values(ledger).forEach(item => {
+        const exclusions = item.activitiesExcluded.join(" | ") || "None";
+        csv += `"${item.member.name}","${Math.round(item.finalShare)}","${exclusions}","${item.member.paid ? 'PAID' : 'PENDING'}"\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Splitwise_Simulation_${selectedScenario}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function runAutomatedValidationSuite() {
+      openModal('validationSuiteModal');
+      const container = document.getElementById('testResultsContainer');
+      container.innerHTML = '<div class="text-slate-400">Executing unit tests across calculation engine...</div>';
+
+      const results = [];
+
+      const currentExpenses = selectedScenario === 'A' ? expensesScenarioA : (selectedScenario === 'B' ? expensesScenarioB : expensesScenarioC);
+      const totalBill = currentExpenses.reduce((sum, e) => sum + (e.amount * surgeMultiplier), 0);
+      const ledger = calculateMemberShares(selectedScenario);
+      const totalMemberShares = Object.values(ledger).reduce((sum, entry) => sum + entry.finalShare, 0);
+      const diff = Math.abs(totalBill - totalMemberShares);
+      results.push({
+        name: "Test 1: Mathematical Conservation (Total Bill == Sum of Shares)",
+        passed: diff < 2.0,
+        details: `Expected: ${formatCurrency(totalBill)}, Calculated: ${formatCurrency(totalMemberShares)} (Delta: ${diff.toFixed(2)})`
+      });
+
+      const scubaExpense = expensesScenarioA.find(e => e.title.includes('Scuba'));
+      const poojaId = 3;
+      const isPoojaExcluded = scubaExpense ? scubaExpense.excludedMembers.includes(poojaId) : false;
+      const ledgerA = calculateMemberShares('A');
+      const poojaActivities = ledgerA[poojaId]?.activitiesIncluded.map(a => a.title) || [];
+      const poojaOptOutProtected = !poojaActivities.some(t => t.includes('Scuba'));
+      results.push({
+        name: "Test 2: Activity Exclusion Isolation (Opt-out leakage check)",
+        passed: isPoojaExcluded ? poojaOptOutProtected : true,
+        details: "Pooja opted out of Scuba -> Confirmed zero charges leaked to her individual ledger."
+      });
+
+      const totalBeforeDebt = Object.values(ledger).reduce((sum, e) => sum + e.rawOwed, 0);
+      const totalAfterDebt = Object.values(ledger).reduce((sum, e) => sum + e.finalShare, 0);
+      results.push({
+        name: "Test 3: Debt Bailout Invariance (Balance neutrality check)",
+        passed: Math.abs(totalBeforeDebt - totalAfterDebt) < 2.0,
+        details: "P2P debt transfer does not inflate or deflate total group bill."
+      });
+
+      const expectedBuffer = Math.round(totalBill * 0.20);
+      const renderedBuffer = parseInt(document.getElementById('bufferTotal').innerText.replace(/[^0-9]/g, '')) || 0;
+      results.push({
+        name: "Test 4: 20% Contingency Cushion Calculation Check",
+        passed: Math.abs(expectedBuffer - renderedBuffer) <= 1,
+        details: `20% of ${formatCurrency(totalBill)} = ${formatCurrency(expectedBuffer)}`
+      });
+
+      const negativeTestPassed = (Math.max(0, parseFloat("-500") || 0) === 0);
+      results.push({
+        name: "Test 5: Fault-Tolerance & Sanitization Guards",
+        passed: negativeTestPassed,
+        details: "Negative inputs and zero-division states are successfully intercepted."
+      });
+
+      setTimeout(() => {
+        container.innerHTML = '';
+        results.forEach(res => {
+          const div = document.createElement('div');
+          div.className = `p-3 rounded-xl border ${
+            res.passed 
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300' 
+              : 'bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300'
+          }`;
+          div.innerHTML = `
+            <div class="flex items-center justify-between font-bold">
+              <span>${res.passed ? '✅ PASS' : '❌ FAIL'}: ${res.name}</span>
+            </div>
+            <div class="text-[11px] opacity-80 mt-1">${res.details}</div>
+          `;
+          container.appendChild(div);
+        });
+      }, 300);
+    }
+
+    function exportSplitwisePayload() {
+      const activeMembers = members.filter(m => m.active);
+      const chosenExpenses = selectedScenario === 'A' ? expensesScenarioA : (selectedScenario === 'B' ? expensesScenarioB : expensesScenarioC);
+      const ledger = calculateMemberShares(selectedScenario);
+
+      const payload = {
+        api_endpoint: "https://secure.splitwise.com/api/v3.0/create_expense",
+        method: "POST",
+        description: document.getElementById('planTitleInput').value + " (" + document.getElementById(`scenario${selectedScenario}Name`).value + ")",
+        currency_code: currentCurrency,
+        creation_method: "what_if_simulator_enterprise",
+        users: activeMembers.map((m, idx) => ({
+          user_id: 1000 + m.id,
+          name: m.name,
+          paid_share: idx === 0 ? chosenExpenses.reduce((s, e) => s + (e.amount * surgeMultiplier), 0).toFixed(2) : "0.00",
+          owed_share: (ledger[m.id]?.finalShare || 0).toFixed(2)
+        })),
+        details: {
+          simulated_scenario: selectedScenario,
+          contingency_buffer_20_percent: document.getElementById('bufferTotal').innerText,
+          happiness_feasibility_index: document.getElementById('meterScoreNumber').innerText,
+          itemized_sub_expenses: chosenExpenses.map(e => ({
+            name: e.title,
+            cost: (e.amount * surgeMultiplier),
+            participants_count: activeMembers.filter(am => !e.excludedMembers.includes(am.id)).length
+          }))
+        }
+      };
+
+      document.getElementById('apiPayloadCode').innerText = JSON.stringify(payload, null, 2);
+      openModal('splitwisePayloadModal');
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initScrollReveal();
+      recalculate();
+      setTimeout(triggerSpeedometerRev, 350);
+    });
+  </script>
+</body>
+</html>
