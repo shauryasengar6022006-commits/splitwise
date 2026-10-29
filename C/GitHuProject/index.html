@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Splitwise - What-If Expense Simulator & Ledger</title>
+  <title>Splitwise - What-If Enterprise Expense Simulator & Feasibility Engine</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
   <script>
@@ -38,28 +38,57 @@
       font-family: 'Plus Jakarta Sans', sans-serif;
     }
 
+    /* Piggy Bank & Dropping Coin Animations */
     @keyframes dropCoin {
-      0% { opacity: 0; transform: translateY(-45px) scale(0.6) rotate(-20deg); }
-      30% { opacity: 1; transform: translateY(-20px) scale(1) rotate(10deg); }
-      75% { opacity: 1; transform: translateY(12px) scale(0.85) rotate(0deg); }
-      100% { opacity: 0; transform: translateY(24px) scale(0.3) rotate(0deg); }
+      0% {
+        opacity: 0;
+        transform: translateY(-45px) scale(0.6) rotate(-20deg);
+      }
+      30% {
+        opacity: 1;
+        transform: translateY(-20px) scale(1) rotate(10deg);
+      }
+      75% {
+        opacity: 1;
+        transform: translateY(12px) scale(0.85) rotate(0deg);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(24px) scale(0.3) rotate(0deg);
+      }
     }
 
     @keyframes piggyGulp {
-      0%, 65% { transform: scale(1); }
-      78% { transform: scale(1.22) translateY(-4px); }
-      88% { transform: scale(0.94) translateY(2px); }
-      100% { transform: scale(1); }
+      0%, 65% {
+        transform: scale(1);
+      }
+      78% {
+        transform: scale(1.22) translateY(-4px);
+      }
+      88% {
+        transform: scale(0.94) translateY(2px);
+      }
+      100% {
+        transform: scale(1);
+      }
     }
 
-    .coin-drop-anim { animation: dropCoin 2.4s infinite cubic-bezier(0.5, 0, 0.75, 0); }
-    .piggy-gulp-anim { animation: piggyGulp 2.4s infinite ease-in-out; transform-origin: center bottom; }
+    .coin-drop-anim {
+      animation: dropCoin 2.4s infinite cubic-bezier(0.5, 0, 0.75, 0);
+    }
 
+    .piggy-gulp-anim {
+      animation: piggyGulp 2.4s infinite ease-in-out;
+      transform-origin: center bottom;
+    }
+
+    /* Speedometer Needle */
     #meterNeedle {
       transform-origin: 100px 90px;
       transition: transform 0.05s linear;
     }
 
+    /* Theme Curtain Transition */
     #themeCurtain {
       pointer-events: none;
       position: fixed;
@@ -88,9 +117,16 @@
       50% { box-shadow: 0 0 20px 4px rgba(28, 194, 159, 0.22); }
     }
 
-    .animate-pop-in { animation: popIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-    .animate-slide-out { animation: slideOut 0.28s cubic-bezier(0.4, 0, 0.2, 1) forwards; overflow: hidden; }
-    .selected-scenario-glow { animation: pulseAura 3s infinite ease-in-out; }
+    .animate-pop-in {
+      animation: popIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .animate-slide-out {
+      animation: slideOut 0.28s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      overflow: hidden;
+    }
+    .selected-scenario-glow {
+      animation: pulseAura 3s infinite ease-in-out;
+    }
 
     .reveal-on-scroll {
       opacity: 0;
@@ -102,7 +138,7 @@
       transform: translateY(0);
     }
 
-    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 999px; }
     .dark ::-webkit-scrollbar-thumb { background: #475569; }
   </style>
@@ -113,27 +149,45 @@
   <!-- Fullscreen Theme Radial Curtain -->
   <div id="themeCurtain" class="bg-slate-900"></div>
 
-  <!-- Header -->
-  <header class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-40">
-    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+  <!-- Global Sticky Header -->
+  <header class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-40 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between gap-2">
       <div class="flex items-center gap-3">
-        <div class="bg-gradient-to-tr from-[#1cc29f] to-[#2de2bb] text-white font-black rounded-xl w-9 h-9 flex items-center justify-center text-lg shadow-md shadow-brand/30">
+        <div class="bg-gradient-to-tr from-[#1cc29f] to-[#2de2bb] text-white font-black rounded-xl w-10 h-10 flex items-center justify-center text-xl shadow-md shadow-brand/30">
           S
         </div>
         <div class="flex flex-col">
           <div class="flex items-center gap-2">
             <span class="font-extrabold tracking-tight text-xl text-slate-900 dark:text-white">splitwise</span>
-            <span class="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
-              🔮 Simulator Engine Pro
+            <span class="bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-500 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+              🔮 Enterprise Simulator Pro
             </span>
           </div>
-          <span class="text-[11px] text-slate-400 font-medium">Predictive Sandbox & In-Memory Staging</span>
+          <span class="text-[11px] text-slate-400 font-medium">Predictive Sandbox & In-Memory Staging Engine</span>
         </div>
       </div>
 
       <div class="flex items-center gap-2">
+        <!-- Currency Converter Selector -->
+        <div class="flex items-center bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-2.5 py-1">
+          <i class="fa-solid fa-coins text-[11px] text-brand mr-1.5"></i>
+          <select id="currencySelector" onchange="changeCurrency(this.value)" class="bg-transparent text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none cursor-pointer">
+            <option value="INR">₹ INR</option>
+            <option value="USD">$ USD</option>
+            <option value="EUR">€ EUR</option>
+            <option value="AED">د.إ AED</option>
+            <option value="GBP">£ GBP</option>
+          </select>
+        </div>
+
         <button onclick="toggleAudio()" id="soundToggleBtn" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 transition shadow-sm" title="Toggle Sound FX">
           <i class="fa-solid fa-volume-high text-xs"></i>
+        </button>
+
+        <button onclick="toggleChatDrawer()" class="bg-brand/10 hover:bg-brand/20 text-brand border border-brand/30 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition transform active:scale-95 shadow-sm relative">
+          <i class="fa-solid fa-comments"></i>
+          <span class="hidden sm:inline">Group Chat</span>
+          <span class="w-2 h-2 rounded-full bg-rose-500 absolute -top-0.5 -right-0.5 animate-ping"></span>
         </button>
 
         <button onclick="openModal('architectureModal')" class="hidden sm:flex bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-300 border border-blue-500/30 px-3 py-1.5 rounded-xl text-xs font-bold items-center gap-1.5 transition transform active:scale-95 shadow-sm">
@@ -151,7 +205,12 @@
           <span>Ledgers</span>
         </button>
 
-        <button onclick="toggleDarkModeWithCurtain()" id="themeToggleBtn" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-amber-400 transition transform active:scale-95 shadow-sm" title="Toggle Theme">
+        <button onclick="openModal('debtTransferModal')" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition transform active:scale-95 shadow-sm">
+          <i class="fa-solid fa-hand-holding-dollar"></i>
+          <span>Transfer Debt</span>
+        </button>
+
+        <button onclick="toggleDarkModeWithCurtain()" id="themeToggleBtn" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-amber-400 transition transform active:scale-95 shadow-sm" title="Toggle Dark/Light Mode">
           <i class="fa-solid fa-moon text-sm"></i>
         </button>
       </div>
@@ -162,26 +221,84 @@
   <main class="max-w-7xl mx-auto w-full px-4 py-6 flex-1 flex flex-col gap-8">
 
     <!-- Plan Header -->
-    <div class="reveal-on-scroll bg-gradient-to-r from-white via-slate-50 to-white dark:from-slate-900 dark:via-slate-800/80 dark:to-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+    <div class="reveal-on-scroll bg-gradient-to-r from-white via-slate-50 to-white dark:from-slate-900 dark:via-slate-800/80 dark:to-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
       <div class="space-y-1.5 flex-1">
         <div class="flex flex-wrap items-center gap-2">
-          <input id="planTitleInput" type="text" value="Goa Trip: Beach Villa vs Resort vs Custom Homestay" oninput="saveToStorage()" class="text-xl md:text-2xl font-black text-slate-900 dark:text-white border-b-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-brand focus:border-brand focus:outline-none bg-transparent transition w-full max-w-xl" title="Click to rename trip" />
+          <input id="planTitleInput" type="text" value="Goa Trip: Beach Villa vs Resort vs Custom Homestay" oninput="saveToStorage()" class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white border-b-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-brand focus:border-brand focus:outline-none bg-transparent transition w-full max-w-xl" title="Click to rename trip" />
         </div>
         <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-          Simulate spending choices, friend dropouts, tachometer happiness score, and settlement status before or after booking.
+          Reverse-engineering predictive staging: isolate financial commitments, run flake simulations, per-activity exclusions, and settle upfront without polluting live Splitwise accounts.
         </p>
       </div>
 
       <div class="flex flex-wrap items-center gap-2">
         <button onclick="copyWhatsAppDigest()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition transform active:scale-95">
-          <i class="fa-brands fa-whatsapp text-sm"></i> Copy WhatsApp Summary
+          <i class="fa-brands fa-whatsapp text-sm"></i> WhatsApp Summary
         </button>
         <button onclick="downloadCSVReport()" class="bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 px-3 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition">
           <i class="fa-solid fa-file-csv text-sm text-brand"></i> Export CSV
         </button>
-        <button onclick="openModal('addExpenseModal')" class="bg-gradient-to-r from-brand to-[#15a385] text-white px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-brand/20 transition transform active:scale-95">
+        <button onclick="exportSplitwisePayload()" class="bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-sm transition transform active:scale-95">
+          <i class="fa-solid fa-code text-brand"></i> Splitwise API Payload
+        </button>
+        <button onclick="openModal('addExpenseModal')" class="bg-gradient-to-r from-brand to-[#15a385] text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-brand/20 transition transform active:scale-95">
           <i class="fa-solid fa-plus-circle text-xs"></i> Add Bill
         </button>
+      </div>
+    </div>
+
+    <!-- Live Multi-Variable Stress-Test Matrix -->
+    <div class="reveal-on-scroll bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
+            <i class="fa-solid fa-wand-magic-sparkles text-brand"></i> Live Multi-Variable Stress-Test Matrix
+          </h2>
+          <p class="text-xs text-slate-400">Dynamically scale flake dropouts and surge inflation to test worst-case financial scenarios.</p>
+        </div>
+        <button onclick="resetSliders()" class="text-xs font-bold text-brand hover:underline">Reset to Baseline</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Variable 1: Headcount Flake Slider -->
+        <div class="space-y-2 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200/70 dark:border-slate-800">
+          <div class="flex justify-between items-center text-xs">
+            <span class="font-bold text-slate-600 dark:text-slate-300">Simulated Group Size:</span>
+            <span id="sliderHeadcountText" class="font-black text-brand font-mono text-sm">6 Friends</span>
+          </div>
+          <input id="flakeSlider" type="range" min="1" max="10" value="6" oninput="updateLiveHeadcount(this.value)" class="w-full accent-brand cursor-pointer" />
+          <div class="flex justify-between text-[10px] text-slate-400 font-semibold">
+            <span>Solo (1)</span>
+            <span>Intended (6)</span>
+            <span>Max (10)</span>
+          </div>
+        </div>
+
+        <!-- Variable 2: Surge Inflation Multiplier -->
+        <div class="space-y-2 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200/70 dark:border-slate-800">
+          <div class="flex justify-between items-center text-xs">
+            <span class="font-bold text-slate-600 dark:text-slate-300">Surge / Fuel Multiplier:</span>
+            <span id="sliderSurgeText" class="font-black text-amber-500 font-mono text-sm">1.0x (Standard)</span>
+          </div>
+          <input id="surgeSlider" type="range" min="1.0" max="2.0" step="0.1" value="1.0" oninput="updateSurgeMultiplier(this.value)" class="w-full accent-amber-500 cursor-pointer" />
+          <div class="flex justify-between text-[10px] text-slate-400 font-semibold">
+            <span>Normal (1.0x)</span>
+            <span>Busy (+50%)</span>
+            <span>Peak Surge (2.0x)</span>
+          </div>
+        </div>
+
+        <!-- Variable 3: Personal Budget Target Cap -->
+        <div class="space-y-2 bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200/70 dark:border-slate-800">
+          <div class="flex justify-between items-center text-xs">
+            <span class="font-bold text-slate-600 dark:text-slate-300">Max Personal Budget:</span>
+            <span id="budgetCapDisplay" class="font-black text-purple-500 font-mono text-sm">₹10,000</span>
+          </div>
+          <input id="budgetCapSlider" type="range" min="2000" max="30000" step="500" value="10000" oninput="updateBudgetCap(this.value)" class="w-full accent-purple-500 cursor-pointer" />
+          <div id="budgetCapFeedback" class="text-[10px] font-bold text-emerald-500 flex items-center gap-1">
+            <i class="fa-solid fa-circle-check"></i> Within safe comfort threshold
+          </div>
+        </div>
       </div>
     </div>
 
@@ -194,29 +311,6 @@
         <button onclick="clearAllDebts()" class="text-[11px] text-amber-600 hover:underline font-bold">Clear All Debts</button>
       </div>
       <div id="debtsList" class="flex flex-wrap gap-2 pt-1"></div>
-    </div>
-
-    <!-- Maximum Budget Radar Slider Card -->
-    <div class="reveal-on-scroll bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
-      <div class="space-y-1 w-full md:w-auto">
-        <div class="flex items-center gap-2">
-          <i class="fa-solid fa-bullseye text-brand"></i>
-          <span class="text-xs uppercase font-extrabold tracking-wider text-slate-400">Budget Target Radar</span>
-        </div>
-        <div class="text-sm font-bold text-slate-800 dark:text-slate-100">
-          Target Cap per Person: <span id="budgetCapDisplay" class="text-brand font-black font-mono">₹10,000</span>
-        </div>
-      </div>
-
-      <div class="flex-1 w-full max-w-md flex items-center gap-3">
-        <span class="text-[10px] text-slate-400 font-bold">₹2,000</span>
-        <input id="budgetCapSlider" type="range" min="2000" max="30000" step="500" value="10000" oninput="updateBudgetCap(this.value)" class="w-full accent-brand cursor-pointer" />
-        <span class="text-[10px] text-slate-400 font-bold">₹30,000</span>
-      </div>
-
-      <div id="budgetCapFeedback" class="text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap">
-        ✅ Within Group Budget
-      </div>
     </div>
 
     <!-- Happiness Speedometer & Jumbo Animated Piggy Bank -->
@@ -295,7 +389,7 @@
           </div>
 
           <div class="relative w-28 h-28 flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-amber-100/60 dark:from-amber-950/30 dark:to-amber-900/10 rounded-2xl border border-amber-200/70 dark:border-amber-800/40 p-2 shadow-inner">
-            <div class="absolute top-2 w-7 h-7 rounded-full bg-gradient-to-tr from-yellow-500 to-amber-300 border-2 border-amber-200 flex items-center justify-center text-amber-950 font-black text-xs shadow-md coin-drop-anim z-10 pointer-events-none">
+            <div class="absolute top-2 w-7 h-7 rounded-full bg-gradient-to-tr from-yellow-500 to-amber-300 border-2 border-amber-200 flex items-center justify-center text-amber-950 font-black text-xs shadow-md coin-drop-anim z-10 pointer-events-none" id="piggyCoinSymbol">
               ₹
             </div>
             <div class="text-5xl text-amber-500 piggy-gulp-anim mt-3 filter drop-shadow-md">
@@ -316,7 +410,7 @@
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
         <div>
           <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
-            <i class="fa-solid fa-users text-brand"></i> Friends Roster & Attendance
+            <i class="fa-solid fa-users text-brand"></i> Friends Roster & Attendance Matrix
           </h2>
           <p class="text-xs text-slate-400">Toggle a member off to simulate them dropping from the trip completely.</p>
         </div>
@@ -458,6 +552,44 @@
       </div>
     </div>
 
+    <!-- Trip Itinerary & Daily Burn Rate Breakdown -->
+    <div class="reveal-on-scroll bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <i class="fa-solid fa-calendar-days text-brand"></i> Itinerary & Daily Burn Rate Breakdown
+          </h2>
+          <p class="text-xs text-slate-400">Pinpoint spending velocity across individual trip days to eliminate front-loaded sticker shock.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="itineraryTimelineGrid">
+        <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-2">
+          <div class="flex justify-between items-center text-xs font-bold">
+            <span class="text-brand">📅 Day 1: Arrival & Villa Check-in</span>
+            <span class="font-mono text-slate-900 dark:text-white" id="day1Burn">₹24,000</span>
+          </div>
+          <p class="text-[11px] text-slate-400">Villa occupancy deposit, rental vehicle pickup & highway tolls.</p>
+        </div>
+
+        <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-2">
+          <div class="flex justify-between items-center text-xs font-bold">
+            <span class="text-amber-500">📅 Day 2: Excursions & Water Sports</span>
+            <span class="font-mono text-slate-900 dark:text-white" id="day2Burn">₹17,000</span>
+          </div>
+          <p class="text-[11px] text-slate-400">Scuba diving sessions, island cruises, beach-shack brunch.</p>
+        </div>
+
+        <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/40 space-y-2">
+          <div class="flex justify-between items-center text-xs font-bold">
+            <span class="text-purple-500">📅 Day 3: Nightlife & Farewell Dinner</span>
+            <span class="font-mono text-slate-900 dark:text-white" id="day3Burn">₹12,000</span>
+          </div>
+          <p class="text-[11px] text-slate-400">Fine dining, souvenirs, return fuel top-up & airport transit.</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Sensitivity & Dropout Risk Matrix -->
     <div class="reveal-on-scroll bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-3">
       <div class="flex items-center justify-between">
@@ -485,7 +617,7 @@
       </div>
     </div>
 
-    <!-- POST-TRIP SETTLEMENT & PAID/UNPAID TRACKER -->
+    <!-- Post-Trip Settlement & Paid/Unpaid Tracker -->
     <div id="settlementSection" class="reveal-on-scroll bg-white dark:bg-slate-900 border-2 border-emerald-500/40 dark:border-emerald-500/30 rounded-2xl p-6 shadow-sm space-y-4">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-2">
         <div>
@@ -515,7 +647,7 @@
 
   </main>
 
-  <!-- MODAL 1: Member Ledgers -->
+  <!-- MODAL 1: Individual Member Ledgers Window -->
   <div id="individualLedgerModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-3xl w-full p-6 shadow-2xl animate-pop-in max-h-[85vh] flex flex-col">
       <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -540,7 +672,7 @@
     </div>
   </div>
 
-  <!-- MODAL 2: Debt Transfer -->
+  <!-- MODAL 2: Debt Transfer Modal -->
   <div id="debtTransferModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-pop-in">
       <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -571,7 +703,7 @@
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Amount to Transfer (₹ INR)</label>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Amount to Transfer</label>
           <input id="debtTransferAmount" type="number" placeholder="Leave empty to transfer their full share" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-brand" />
         </div>
 
@@ -609,7 +741,7 @@
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Total Bill Amount (₹ INR)</label>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Total Bill Amount</label>
           <input id="newExpenseAmount" type="number" placeholder="6000" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-brand" />
         </div>
 
@@ -657,7 +789,7 @@
           </div>
           <div>
             <h3 class="font-bold text-slate-900 dark:text-white text-base">Automated Validation & Unit Test Suite</h3>
-            <p class="text-xs text-slate-400">Verifying mathematical correctness, DAG zero-sum balances, and error handling.</p>
+            <p class="text-xs text-slate-400">Verifying mathematical correctness, zero-sum balances, and error handling.</p>
           </div>
         </div>
         <button onclick="closeModal('validationSuiteModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
@@ -712,7 +844,7 @@
               <i class="fa-solid fa-shield-check"></i> What-If Simulation Sandbox
             </h4>
             <ul class="space-y-1.5 text-slate-600 dark:text-slate-300">
-              <li>• <strong>In-Memory DAG Simulation:</strong> Pure state tree recalculated client-side with zero network noise.</li>
+              <li>• <strong>In-Memory Simulation:</strong> Pure state tree recalculated client-side with zero network noise.</li>
               <li>• <strong>Zero Side-Effects:</strong> Headcounts and per-activity exclusions test budgets safely.</li>
               <li>• <strong>Single Push Commit:</strong> Compiles winning plan to Splitwise's <code>POST /create_expense</code> format.</li>
             </ul>
@@ -728,7 +860,36 @@
     </div>
   </div>
 
-  <!-- MODAL 6: UPI QR Code Payment Simulator -->
+  <!-- MODAL 6: Splitwise API Export Payload -->
+  <div id="splitwisePayloadModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-2xl w-full p-6 shadow-2xl animate-pop-in max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center">
+            <i class="fa-solid fa-paper-plane"></i>
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-900 dark:text-white text-base">Reverse Engineered Splitwise API Payload</h3>
+            <p class="text-xs text-slate-400">JSON output prepared for official <code>/api/v3.0/create_expense</code> endpoint</p>
+          </div>
+        </div>
+        <button onclick="closeModal('splitwisePayloadModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <pre id="apiPayloadCode" class="p-4 my-4 bg-slate-900 text-emerald-400 rounded-xl overflow-x-auto text-[11px] font-mono leading-relaxed flex-1"></pre>
+
+      <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+        <span class="text-xs text-slate-400">Zero database corruption during simulation</span>
+        <button onclick="closeModal('splitwisePayloadModal')" class="px-4 py-2 bg-brand text-white rounded-xl font-bold text-xs hover:bg-brand-dark transition">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 7: UPI QR Code Payment Simulator -->
   <div id="upiModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-sm w-full p-6 shadow-2xl animate-pop-in flex flex-col items-center text-center">
       <div class="w-12 h-12 rounded-2xl bg-brand/10 text-brand flex items-center justify-center text-xl mb-3">
@@ -756,6 +917,56 @@
     </div>
   </div>
 
+  <!-- Group Negotiation Chat Drawer (Slide-out) -->
+  <div id="chatDrawer" class="fixed inset-y-0 right-0 max-w-sm w-full bg-white dark:bg-slate-900 border-l border-slate-200 dark:border-slate-800 z-50 shadow-2xl transform translate-x-full transition-transform duration-300 flex flex-col">
+    <div class="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center font-bold">
+          <i class="fa-solid fa-comments"></i>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-slate-900 dark:text-white">Trip Consensus Chat</h3>
+          <span class="text-[10px] text-emerald-500 font-semibold">● 4 members actively negotiating</span>
+        </div>
+      </div>
+      <button onclick="toggleChatDrawer()" class="text-slate-400 hover:text-slate-600">
+        <i class="fa-solid fa-xmark text-lg"></i>
+      </button>
+    </div>
+
+    <div id="chatMessagesContainer" class="flex-1 p-4 overflow-y-auto space-y-3 text-xs">
+      <div class="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-slate-700 dark:text-slate-200 max-w-[85%]">
+        <strong class="text-brand text-[10px] block">Aarav:</strong>
+        Option A looks great, but if 2 people drop out, does our share cross our comfort target?
+      </div>
+      <div class="bg-brand/10 border border-brand/20 p-2.5 rounded-xl text-slate-800 dark:text-slate-100 max-w-[85%] ml-auto">
+        <strong class="text-brand text-[10px] block">System Simulation Bot:</strong>
+        Check the Dropout Matrix above! If 2 drop out on Option A, share becomes ₹7,333.
+      </div>
+      <div class="bg-slate-100 dark:bg-slate-800 p-2.5 rounded-xl text-slate-700 dark:text-slate-200 max-w-[85%]">
+        <strong class="text-pink-500 text-[10px] block">Pooja:</strong>
+        I opted out of Scuba diving to save money. Did my opt-out register in the personal ledger?
+      </div>
+    </div>
+
+    <!-- Quick Action Negotiation Chips -->
+    <div class="p-3 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 flex flex-wrap gap-1.5">
+      <button onclick="sendChatMessage('Let us select Option B instead!')" class="text-[10px] bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded-lg font-bold hover:bg-brand hover:text-white transition">
+        Switch to Option B
+      </button>
+      <button onclick="sendChatMessage('I can sponsor some debt upfront!')" class="text-[10px] bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded-lg font-bold hover:bg-brand hover:text-white transition">
+        Offer Sponsor Debt
+      </button>
+    </div>
+
+    <div class="p-3 border-t border-slate-200 dark:border-slate-800 flex gap-2">
+      <input id="chatInput" type="text" placeholder="Type a message to the group..." onkeydown="if(event.key === 'Enter') handleUserChatMessage()" class="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand" />
+      <button onclick="handleUserChatMessage()" class="px-3 bg-brand text-white rounded-xl text-xs font-bold hover:bg-brand-dark transition">
+        <i class="fa-solid fa-paper-plane"></i>
+      </button>
+    </div>
+  </div>
+
   <script>
     // State with LocalStorage Persistence
     let isDarkMode = false;
@@ -764,6 +975,10 @@
     let audioEnabled = true;
     let pendingUpiMemberId = null;
     let maxBudgetCap = 10000;
+    let currentCurrency = 'INR';
+    let currencyRates = { INR: 1, USD: 0.012, EUR: 0.011, AED: 0.044, GBP: 0.0095 };
+    let currencySymbols = { INR: '₹', USD: '$', EUR: '€', AED: 'د.إ', GBP: '£' };
+    let surgeMultiplier = 1.0;
 
     let defaultMembers = [
       { id: 1, name: "You", active: true, color: "from-brand to-emerald-400", paid: false },
@@ -809,6 +1024,17 @@
       localStorage.setItem('splitwise_debts', JSON.stringify(debts));
     }
 
+    function formatCurrency(amount) {
+      const converted = amount * currencyRates[currentCurrency];
+      return `${currencySymbols[currentCurrency]}${Number(Math.round(converted)).toLocaleString()}`;
+    }
+
+    function changeCurrency(curr) {
+      currentCurrency = curr;
+      document.getElementById('piggyCoinSymbol').innerText = currencySymbols[curr];
+      recalculate();
+    }
+
     // Audio Micro-interactions Synthesizer
     let audioCtx = null;
     function playBeep(freq = 440, type = 'sine', duration = 0.1) {
@@ -844,10 +1070,6 @@
       }
     }
 
-    function formatINR(amount) {
-      return '₹' + Number(Math.round(amount)).toLocaleString('en-IN');
-    }
-
     // Rolling Odometer Transition for DOM Elements
     function animateValue(elementId, start, end, duration = 400) {
       const obj = document.getElementById(elementId);
@@ -857,7 +1079,7 @@
         if (!startTimestamp) startTimestamp = timestamp;
         const progress = Math.min((timestamp - startTimestamp) / duration, 1);
         const current = Math.floor(progress * (end - start) + start);
-        obj.innerText = formatINR(current);
+        obj.innerText = formatCurrency(current);
         if (progress < 1) {
           window.requestAnimationFrame(step);
         }
@@ -915,25 +1137,47 @@
       triggerSpeedometerRev();
     }
 
+    // Multi-Variable Slider Handlers
+    function updateLiveHeadcount(val) {
+      const count = parseInt(val);
+      document.getElementById('sliderHeadcountText').innerText = `${count} Friends`;
+      members.forEach((m, idx) => m.active = idx < count);
+      recalculate();
+      triggerSpeedometerRev();
+    }
+
+    function updateSurgeMultiplier(val) {
+      surgeMultiplier = parseFloat(val);
+      document.getElementById('sliderSurgeText').innerText = `${surgeMultiplier.toFixed(1)}x (${surgeMultiplier > 1 ? '+' + Math.round((surgeMultiplier - 1) * 100) + '%' : 'Standard'})`;
+      recalculate();
+    }
+
     function updateBudgetCap(val) {
       maxBudgetCap = parseInt(val);
-      document.getElementById('budgetCapDisplay').innerText = formatINR(maxBudgetCap);
+      document.getElementById('budgetCapDisplay').innerText = formatCurrency(maxBudgetCap);
       evaluateBudgetHealth();
+    }
+
+    function resetSliders() {
+      document.getElementById('flakeSlider').value = 6;
+      document.getElementById('surgeSlider').value = 1.0;
+      updateLiveHeadcount(6);
+      updateSurgeMultiplier(1.0);
     }
 
     function evaluateBudgetHealth() {
       const activeTripMembers = members.filter(m => m.active);
       const chosenExpenses = selectedScenario === 'A' ? expensesScenarioA : (selectedScenario === 'B' ? expensesScenarioB : expensesScenarioC);
-      const sum = chosenExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+      const sum = chosenExpenses.reduce((acc, curr) => acc + (curr.amount * surgeMultiplier), 0);
       const perHead = activeTripMembers.length > 0 ? sum / activeTripMembers.length : 0;
       const feedback = document.getElementById('budgetCapFeedback');
 
       if (perHead <= maxBudgetCap) {
-        feedback.innerText = `✅ Within Target (₹${Math.round(maxBudgetCap - perHead).toLocaleString()} buffer)`;
-        feedback.className = "text-xs font-bold px-3 py-1.5 rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 whitespace-nowrap";
+        feedback.innerHTML = `<i class="fa-solid fa-circle-check"></i> Within safe comfort threshold (${formatCurrency(maxBudgetCap - perHead)} headroom)`;
+        feedback.className = "text-[10px] font-bold text-emerald-500 flex items-center gap-1";
       } else {
-        feedback.innerText = `⚠️ Exceeds Target by ₹${Math.round(perHead - maxBudgetCap).toLocaleString()}!`;
-        feedback.className = "text-xs font-bold px-3 py-1.5 rounded-xl bg-rose-500/10 text-rose-500 border border-rose-500/20 whitespace-nowrap animate-pulse";
+        feedback.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Exceeds cap by ${formatCurrency(perHead - maxBudgetCap)}!`;
+        feedback.className = "text-[10px] font-bold text-rose-500 flex items-center gap-1 animate-pulse";
       }
     }
 
@@ -1083,7 +1327,7 @@
         if (!item.excludedMembers) item.excludedMembers = [];
         const participatingMembers = activeTripMembers.filter(m => !item.excludedMembers.includes(m.id));
         const count = participatingMembers.length > 0 ? participatingMembers.length : 1;
-        const perPersonItemCost = Math.round(item.amount / count);
+        const perPersonItemCost = Math.round((item.amount * surgeMultiplier) / count);
 
         const card = document.createElement('div');
         card.id = `bill-${scenario}-${item.id}`;
@@ -1112,7 +1356,7 @@
             </div>
             
             <div class="flex items-center gap-1.5">
-              <span class="text-xs font-bold text-slate-400">₹</span>
+              <span class="text-xs font-bold text-slate-400">${currencySymbols[currentCurrency]}</span>
               <input type="number" value="${item.amount}" 
                 oninput="updateExpensePrice('${scenario}', '${item.id}', this.value)"
                 class="w-20 text-right font-extrabold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:border-brand font-mono" />
@@ -1124,7 +1368,7 @@
 
           <div class="flex items-center justify-between text-[10px] text-slate-400 pt-0.5 border-t border-slate-200/40 dark:border-slate-700/40">
             <span>Split by ${count} friends</span>
-            <span class="font-bold text-brand font-mono">${formatINR(perPersonItemCost)} / person</span>
+            <span class="font-bold text-brand font-mono">${formatCurrency(perPersonItemCost)} / person</span>
           </div>
 
           <div class="flex flex-wrap items-center gap-1 pt-0.5">
@@ -1172,7 +1416,7 @@
       chosenExpenses.forEach(exp => {
         const participating = activeMembers.filter(m => !exp.excludedMembers.includes(m.id));
         const count = participating.length > 0 ? participating.length : 1;
-        const itemPerPerson = exp.amount / count;
+        const itemPerPerson = (exp.amount * surgeMultiplier) / count;
 
         activeMembers.forEach(m => {
           if (!exp.excludedMembers.includes(m.id)) {
@@ -1188,8 +1432,8 @@
         if (ledger[d.debtorId] && ledger[d.sponsorId]) {
           ledger[d.debtorId].debtTransferredOut += d.amount;
           ledger[d.sponsorId].debtSponsoredIn += d.amount;
-          ledger[d.debtorId].sponsoredDetails.push(`Debt: Covered by ${members.find(m => m.id === d.sponsorId)?.name} (-${formatINR(d.amount)})`);
-          ledger[d.sponsorId].sponsoredDetails.push(`Bailout: Sponsoring ${members.find(m => m.id === d.debtorId)?.name} (+${formatINR(d.amount)})`);
+          ledger[d.debtorId].sponsoredDetails.push(`Debt: Covered by ${members.find(m => m.id === d.sponsorId)?.name} (-${formatCurrency(d.amount)})`);
+          ledger[d.sponsorId].sponsoredDetails.push(`Bailout: Sponsoring ${members.find(m => m.id === d.debtorId)?.name} (+${formatCurrency(d.amount)})`);
         }
       });
 
@@ -1210,7 +1454,7 @@
 
       const activeTripMembers = members.filter(m => m.active);
       const chosenExpenses = selectedScenario === 'A' ? expensesScenarioA : (selectedScenario === 'B' ? expensesScenarioB : expensesScenarioC);
-      const sum = chosenExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+      const sum = chosenExpenses.reduce((acc, curr) => acc + (curr.amount * surgeMultiplier), 0);
       const perHead = activeTripMembers.length > 0 ? sum / activeTripMembers.length : 0;
 
       let targetScore = 100 - (perHead / 220);
@@ -1288,7 +1532,7 @@
     function openUpiModal(memberId, amount) {
       pendingUpiMemberId = memberId;
       const cleanAmt = Math.round(amount);
-      document.getElementById('upiAmountText').innerText = formatINR(cleanAmt);
+      document.getElementById('upiAmountText').innerText = formatCurrency(cleanAmt);
       const upiUrl = `upi://pay?pa=group@upi&pn=SplitwiseTrip&am=${cleanAmt}&cu=INR`;
       document.getElementById('upiQrImage').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiUrl)}`;
       openModal('upiModal');
@@ -1369,7 +1613,7 @@
             </div>
             <div class="text-right">
               <span class="text-xs font-bold uppercase text-slate-400">Share Due</span>
-              <div class="text-base font-black text-slate-900 dark:text-white font-mono">${formatINR(item.finalShare)}</div>
+              <div class="text-base font-black text-slate-900 dark:text-white font-mono">${formatCurrency(item.finalShare)}</div>
             </div>
           </div>
 
@@ -1403,17 +1647,39 @@
         container.appendChild(card);
       });
 
-      document.getElementById('totalDueText').innerText = formatINR(totalDue);
-      document.getElementById('collectedAmountText').innerText = formatINR(totalCollected);
+      document.getElementById('totalDueText').innerText = formatCurrency(totalDue);
+      document.getElementById('collectedAmountText').innerText = formatCurrency(totalCollected);
+    }
+
+    function toggleChatDrawer() {
+      const drawer = document.getElementById('chatDrawer');
+      drawer.classList.toggle('translate-x-full');
+    }
+
+    function sendChatMessage(msg) {
+      const container = document.getElementById('chatMessagesContainer');
+      const div = document.createElement('div');
+      div.className = "bg-brand/10 border border-brand/20 p-2.5 rounded-xl text-slate-800 dark:text-slate-100 max-w-[85%] ml-auto";
+      div.innerHTML = `<strong class="text-brand text-[10px] block">You:</strong> ${msg}`;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function handleUserChatMessage() {
+      const input = document.getElementById('chatInput');
+      const msg = input.value.trim();
+      if (!msg) return;
+      sendChatMessage(msg);
+      input.value = '';
     }
 
     function recalculate() {
       const activeTripMembers = members.filter(m => m.active);
       const activeCount = activeTripMembers.length;
 
-      const sumA = expensesScenarioA.reduce((acc, curr) => acc + curr.amount, 0);
-      const sumB = expensesScenarioB.reduce((acc, curr) => acc + curr.amount, 0);
-      const sumC = expensesScenarioC.reduce((acc, curr) => acc + curr.amount, 0);
+      const sumA = expensesScenarioA.reduce((acc, curr) => acc + (curr.amount * surgeMultiplier), 0);
+      const sumB = expensesScenarioB.reduce((acc, curr) => acc + (curr.amount * surgeMultiplier), 0);
+      const sumC = expensesScenarioC.reduce((acc, curr) => acc + (curr.amount * surgeMultiplier), 0);
 
       const perPersonA = activeCount > 0 ? sumA / activeCount : 0;
       const perPersonB = activeCount > 0 ? sumB / activeCount : 0;
@@ -1445,8 +1711,13 @@
       const bufferTotal = Math.round(chosenSum * 0.20);
       const bufferPerPerson = activeCount > 0 ? Math.round(bufferTotal / activeCount) : 0;
 
-      document.getElementById('bufferTotal').innerText = formatINR(bufferTotal);
-      document.getElementById('bufferShare').innerText = `${formatINR(bufferPerPerson)} extra`;
+      document.getElementById('bufferTotal').innerText = formatCurrency(bufferTotal);
+      document.getElementById('bufferShare').innerText = `${formatCurrency(bufferPerPerson)} extra`;
+
+      // Recalculate Day Burn Rates
+      document.getElementById('day1Burn').innerText = formatCurrency(Math.round(chosenSum * 0.45));
+      document.getElementById('day2Burn').innerText = formatCurrency(Math.round(chosenSum * 0.35));
+      document.getElementById('day3Burn').innerText = formatCurrency(Math.round(chosenSum * 0.20));
 
       evaluateBudgetHealth();
       renderMembers();
@@ -1482,11 +1753,11 @@
             <span>${count} Friends</span>
             ${isCurrent ? '<span class="bg-brand text-white text-[9px] px-1.5 py-0.2 rounded font-black">ACTIVE</span>' : ''}
           </td>
-          <td class="py-3 px-3 font-mono font-bold">${formatINR(shareA)}</td>
-          <td class="py-3 px-3 font-mono font-bold">${formatINR(shareB)}</td>
-          <td class="py-3 px-3 font-mono font-bold text-purple-600 dark:text-purple-400">${formatINR(shareC)}</td>
+          <td class="py-3 px-3 font-mono font-bold">${formatCurrency(shareA)}</td>
+          <td class="py-3 px-3 font-mono font-bold">${formatCurrency(shareB)}</td>
+          <td class="py-3 px-3 font-mono font-bold text-purple-600 dark:text-purple-400">${formatCurrency(shareC)}</td>
           <td class="py-3 px-3 text-[11px]">
-            ${count < currentActive ? `<span class="text-rose-500 font-bold">⚠️ If ${currentActive - count} drops: +${formatINR(shareA - (sumA / currentActive))} on A</span>` : '<span class="text-emerald-500">✅ Active group baseline</span>'}
+            ${count < currentActive ? `<span class="text-rose-500 font-bold">⚠️ If ${currentActive - count} drops: +${formatCurrency(shareA - (sumA / currentActive))} on A</span>` : '<span class="text-emerald-500">✅ Active group baseline</span>'}
           </td>
         `;
         tbody.appendChild(row);
@@ -1516,7 +1787,7 @@
         let activitiesHTML = item.activitiesIncluded.map(a => `
           <div class="flex justify-between items-center text-xs text-slate-600 dark:text-slate-300 py-0.5">
             <span>• ${a.title}</span>
-            <span class="font-mono font-semibold">${formatINR(a.cost)}</span>
+            <span class="font-mono font-semibold">${formatCurrency(a.cost)}</span>
           </div>
         `).join('');
 
@@ -1542,7 +1813,7 @@
             </div>
             <div class="text-right">
               <div class="text-[10px] text-slate-400 font-bold uppercase">To Pay Upfront</div>
-              <div class="text-lg font-black text-brand font-mono">${formatINR(item.finalShare)}</div>
+              <div class="text-lg font-black text-brand font-mono">${formatCurrency(item.finalShare)}</div>
             </div>
           </div>
 
@@ -1586,7 +1857,7 @@
       const transferAmount = (!isNaN(customAmount) && customAmount > 0) ? customAmount : debtorShare;
 
       if (transferAmount <= 0) {
-        alert("This member currently has ₹0 balance to transfer.");
+        alert("This member currently has 0 balance to transfer.");
         return;
       }
 
@@ -1624,7 +1895,7 @@
         const chip = document.createElement('div');
         chip.className = 'flex items-center gap-2 bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 px-3 py-1.5 rounded-xl text-xs font-bold border border-amber-300 dark:border-amber-700 animate-pop-in';
         chip.innerHTML = `
-          <span>💳 <strong>${debtor}</strong> owes <strong>${sponsor}</strong> ${formatINR(d.amount)}</span>
+          <span>💳 <strong>${debtor}</strong> owes <strong>${sponsor}</strong> ${formatCurrency(d.amount)}</span>
           <button onclick="deleteDebt('${d.id}')" class="text-amber-500 hover:text-rose-500 ml-1">
             <i class="fa-solid fa-xmark"></i>
           </button>
@@ -1661,7 +1932,7 @@
       const scenario = document.getElementById('newExpenseScenario').value;
 
       if (!title || isNaN(amount) || amount <= 0) {
-        alert("Error Handling: Please enter a valid expense title and an amount greater than ₹0.");
+        alert("Error Handling: Please enter a valid expense title and an amount greater than 0.");
         return;
       }
 
@@ -1690,17 +1961,16 @@
       const tripTitle = document.getElementById('planTitleInput').value;
       const planName = document.getElementById(`scenario${selectedScenario}Name`).value;
       const ledger = calculateMemberShares(selectedScenario);
-      const activeMembers = members.filter(m => m.active);
-      const totalAmount = (selectedScenario === 'A' ? expensesScenarioA : (selectedScenario === 'B' ? expensesScenarioB : expensesScenarioC)).reduce((s, e) => s + e.amount, 0);
+      const totalAmount = (selectedScenario === 'A' ? expensesScenarioA : (selectedScenario === 'B' ? expensesScenarioB : expensesScenarioC)).reduce((s, e) => s + (e.amount * surgeMultiplier), 0);
 
       let text = `🌴 *${tripTitle}* 🌴\n`;
       text += `📌 *Selected Plan:* ${planName}\n`;
-      text += `💰 *Total Group Cost:* ${formatINR(totalAmount)}\n`;
+      text += `💰 *Total Group Cost:* ${formatCurrency(totalAmount)}\n`;
       text += `🛡️ *Extra 20% Contingency Buffer:* ${document.getElementById('bufferShare').innerText}\n\n`;
       text += `*Individual Shares to Pay:*\n`;
 
       Object.values(ledger).forEach(item => {
-        text += `• ${item.member.name}: ${formatINR(item.finalShare)}\n`;
+        text += `• ${item.member.name}: ${formatCurrency(item.finalShare)}\n`;
       });
 
       text += `\n⚡ Generated via Splitwise What-If Simulator Sandbox`;
@@ -1712,7 +1982,7 @@
 
     function downloadCSVReport() {
       const ledger = calculateMemberShares(selectedScenario);
-      let csv = "Member,Total Owed Upfront (INR),Opted Out Activities,Paid Status\n";
+      let csv = "Member,Total Owed Upfront,Opted Out Activities,Paid Status\n";
 
       Object.values(ledger).forEach(item => {
         const exclusions = item.activitiesExcluded.join(" | ") || "None";
@@ -1737,14 +2007,14 @@
       const results = [];
 
       const currentExpenses = selectedScenario === 'A' ? expensesScenarioA : (selectedScenario === 'B' ? expensesScenarioB : expensesScenarioC);
-      const totalBill = currentExpenses.reduce((sum, e) => sum + e.amount, 0);
+      const totalBill = currentExpenses.reduce((sum, e) => sum + (e.amount * surgeMultiplier), 0);
       const ledger = calculateMemberShares(selectedScenario);
       const totalMemberShares = Object.values(ledger).reduce((sum, entry) => sum + entry.finalShare, 0);
       const diff = Math.abs(totalBill - totalMemberShares);
       results.push({
         name: "Test 1: Mathematical Conservation (Total Bill == Sum of Shares)",
         passed: diff < 2.0,
-        details: `Expected: ₹${totalBill.toLocaleString()}, Calculated: ₹${Math.round(totalMemberShares).toLocaleString()} (Delta: ₹${diff.toFixed(2)})`
+        details: `Expected: ${formatCurrency(totalBill)}, Calculated: ${formatCurrency(totalMemberShares)} (Delta: ${diff.toFixed(2)})`
       });
 
       const scubaExpense = expensesScenarioA.find(e => e.title.includes('Scuba'));
@@ -1762,17 +2032,17 @@
       const totalBeforeDebt = Object.values(ledger).reduce((sum, e) => sum + e.rawOwed, 0);
       const totalAfterDebt = Object.values(ledger).reduce((sum, e) => sum + e.finalShare, 0);
       results.push({
-        name: "Test 3: Debt Bailout Invariance (DAG neutrality check)",
+        name: "Test 3: Debt Bailout Invariance (Balance neutrality check)",
         passed: Math.abs(totalBeforeDebt - totalAfterDebt) < 2.0,
         details: "P2P debt transfer does not inflate or deflate total group bill."
       });
 
       const expectedBuffer = Math.round(totalBill * 0.20);
-      const renderedBuffer = parseInt(document.getElementById('bufferTotal').innerText.replace(/[₹,]/g, '')) || 0;
+      const renderedBuffer = parseInt(document.getElementById('bufferTotal').innerText.replace(/[^0-9]/g, '')) || 0;
       results.push({
         name: "Test 4: 20% Contingency Cushion Calculation Check",
         passed: Math.abs(expectedBuffer - renderedBuffer) <= 1,
-        details: `20% of ₹${totalBill.toLocaleString()} = ₹${expectedBuffer.toLocaleString()} (Rendered: ₹${renderedBuffer.toLocaleString()})`
+        details: `20% of ${formatCurrency(totalBill)} = ${formatCurrency(expectedBuffer)}`
       });
 
       const negativeTestPassed = (Math.max(0, parseFloat("-500") || 0) === 0);
@@ -1800,6 +2070,39 @@
           container.appendChild(div);
         });
       }, 300);
+    }
+
+    function exportSplitwisePayload() {
+      const activeMembers = members.filter(m => m.active);
+      const chosenExpenses = selectedScenario === 'A' ? expensesScenarioA : (selectedScenario === 'B' ? expensesScenarioB : expensesScenarioC);
+      const ledger = calculateMemberShares(selectedScenario);
+
+      const payload = {
+        api_endpoint: "https://secure.splitwise.com/api/v3.0/create_expense",
+        method: "POST",
+        description: document.getElementById('planTitleInput').value + " (" + document.getElementById(`scenario${selectedScenario}Name`).value + ")",
+        currency_code: currentCurrency,
+        creation_method: "what_if_simulator_enterprise",
+        users: activeMembers.map((m, idx) => ({
+          user_id: 1000 + m.id,
+          name: m.name,
+          paid_share: idx === 0 ? chosenExpenses.reduce((s, e) => s + (e.amount * surgeMultiplier), 0).toFixed(2) : "0.00",
+          owed_share: (ledger[m.id]?.finalShare || 0).toFixed(2)
+        })),
+        details: {
+          simulated_scenario: selectedScenario,
+          contingency_buffer_20_percent: document.getElementById('bufferTotal').innerText,
+          happiness_feasibility_index: document.getElementById('meterScoreNumber').innerText,
+          itemized_sub_expenses: chosenExpenses.map(e => ({
+            name: e.title,
+            cost: (e.amount * surgeMultiplier),
+            participants_count: activeMembers.filter(am => !e.excludedMembers.includes(am.id)).length
+          }))
+        }
+      };
+
+      document.getElementById('apiPayloadCode').innerText = JSON.stringify(payload, null, 2);
+      openModal('splitwisePayloadModal');
     }
 
     window.addEventListener('DOMContentLoaded', () => {
