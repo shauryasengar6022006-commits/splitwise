@@ -28,17 +28,66 @@
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     
     * {
-      transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-                  border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
-                  color 0.3s ease, 
-                  box-shadow 0.4s ease;
+      transition: background-color 0.35s cubic-bezier(0.4, 0, 0.2, 1), 
+                  border-color 0.35s cubic-bezier(0.4, 0, 0.2, 1), 
+                  color 0.25s ease;
     }
 
     body {
       font-family: 'Plus Jakarta Sans', sans-serif;
     }
 
-    /* Theme Curtain Transition Overlay */
+    /* Piggy Bank & Dropping Coin Animations */
+    @keyframes dropCoin {
+      0% {
+        opacity: 0;
+        transform: translateY(-45px) scale(0.6) rotate(-20deg);
+      }
+      30% {
+        opacity: 1;
+        transform: translateY(-20px) scale(1) rotate(10deg);
+      }
+      75% {
+        opacity: 1;
+        transform: translateY(12px) scale(0.85) rotate(0deg);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(24px) scale(0.3) rotate(0deg);
+      }
+    }
+
+    @keyframes piggyGulp {
+      0%, 65% {
+        transform: scale(1);
+      }
+      78% {
+        transform: scale(1.22) translateY(-4px);
+      }
+      88% {
+        transform: scale(0.94) translateY(2px);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .coin-drop-anim {
+      animation: dropCoin 2.4s infinite cubic-bezier(0.5, 0, 0.75, 0);
+    }
+
+    .piggy-gulp-anim {
+      animation: piggyGulp 2.4s infinite ease-in-out;
+      transform-origin: center bottom;
+    }
+
+    /* Speedometer Needle */
+    #meterNeedle {
+      transform-origin: 100px 90px;
+      transition: transform 0.05s linear;
+    }
+
+    /* Theme Curtain Transition */
     #themeCurtain {
       pointer-events: none;
       position: fixed;
@@ -54,7 +103,7 @@
     }
 
     @keyframes popIn {
-      0% { opacity: 0; transform: scale(0.85) translateY(12px); }
+      0% { opacity: 0; transform: scale(0.88) translateY(10px); }
       70% { transform: scale(1.02) translateY(-2px); }
       100% { opacity: 1; transform: scale(1) translateY(0); }
     }
@@ -63,15 +112,15 @@
       100% { opacity: 0; transform: scale(0.85) translateX(30px); max-height: 0; margin-bottom: 0; padding: 0; }
     }
     @keyframes pulseAura {
-      0%, 100% { box-shadow: 0 0 0 0 rgba(28, 194, 159, 0.4); }
-      50% { box-shadow: 0 0 20px 4px rgba(28, 194, 159, 0.25); }
+      0%, 100% { box-shadow: 0 0 0 0 rgba(28, 194, 159, 0.35); }
+      50% { box-shadow: 0 0 20px 4px rgba(28, 194, 159, 0.22); }
     }
 
     .animate-pop-in {
-      animation: popIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      animation: popIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
     .animate-slide-out {
-      animation: slideOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      animation: slideOut 0.28s cubic-bezier(0.4, 0, 0.2, 1) forwards;
       overflow: hidden;
     }
     .selected-scenario-glow {
@@ -80,17 +129,12 @@
 
     .reveal-on-scroll {
       opacity: 0;
-      transform: translateY(24px);
+      transform: translateY(20px);
       transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .reveal-on-scroll.is-visible {
       opacity: 1;
       transform: translateY(0);
-    }
-
-    #meterNeedle {
-      transform-origin: 100px 90px;
-      transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
 
     ::-webkit-scrollbar { width: 6px; }
@@ -101,7 +145,7 @@
 
 <body class="bg-slate-100 text-slate-800 dark:bg-[#0b1120] dark:text-slate-100 min-h-screen flex flex-col selection:bg-brand selection:text-white">
 
-  <!-- Fullscreen Theme Radial Transition Curtain -->
+  <!-- Fullscreen Theme Radial Curtain -->
   <div id="themeCurtain" class="bg-slate-900"></div>
 
   <!-- Header -->
@@ -118,24 +162,21 @@
               🔮 What-If Simulator Pro
             </span>
           </div>
-          <span class="text-[11px] text-slate-400 font-medium">Per-Person Individual Ledger & Debt Bailout Engine</span>
+          <span class="text-[11px] text-slate-400 font-medium">Pre-Expense Feasibility & Post-Payment Tracker</span>
         </div>
       </div>
 
       <div class="flex items-center gap-3">
-        <!-- View Personal Ledgers Modal Button -->
         <button onclick="openModal('individualLedgerModal')" class="bg-brand/10 hover:bg-brand/20 text-brand border border-brand/30 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition transform active:scale-95 shadow-sm">
           <i class="fa-solid fa-address-book"></i>
           <span>Member Ledgers</span>
         </button>
 
-        <!-- Transfer Debt Modal Button -->
         <button onclick="openModal('debtTransferModal')" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition transform active:scale-95 shadow-sm">
           <i class="fa-solid fa-hand-holding-dollar"></i>
           <span>Transfer Debt</span>
         </button>
 
-        <!-- Theme Toggle -->
         <button onclick="toggleDarkModeWithCurtain()" id="themeToggleBtn" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-amber-400 transition transform active:scale-95 shadow-sm" title="Toggle Theme">
           <i class="fa-solid fa-moon text-sm"></i>
         </button>
@@ -150,10 +191,10 @@
     <div class="reveal-on-scroll bg-gradient-to-r from-white via-slate-50 to-white dark:from-slate-900 dark:via-slate-800/80 dark:to-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
       <div class="space-y-1.5 flex-1">
         <div class="flex flex-wrap items-center gap-2">
-          <input id="planTitleInput" type="text" value="Goa Trip: Beach Villa vs Resort vs Custom Homestay" class="text-xl md:text-2xl font-black text-slate-900 dark:text-white border-b-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-brand focus:border-brand focus:outline-none bg-transparent transition w-full max-w-xl" title="Click to rename this trip" />
+          <input id="planTitleInput" type="text" value="Goa Trip: Beach Villa vs Resort vs Custom Homestay" class="text-xl md:text-2xl font-black text-slate-900 dark:text-white border-b-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-brand focus:border-brand focus:outline-none bg-transparent transition w-full max-w-xl" title="Click to rename trip" />
         </div>
         <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
-          Compare 3 custom plans, edit prices in real-time, inspect itemized member shares, and transfer unpaid amounts as debts.
+          Simulate spending choices, friend dropouts, tachometer happiness score, and settlement status before or after booking.
         </p>
       </div>
 
@@ -161,13 +202,13 @@
         <button onclick="openModal('addExpenseModal')" class="bg-gradient-to-r from-brand to-[#15a385] text-white px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 shadow-lg shadow-brand/20 transition transform active:scale-95">
           <i class="fa-solid fa-plus-circle text-sm"></i> Add Bill / Item
         </button>
-        <button onclick="commitSelectedToSplitwise()" class="bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 shadow-sm transition transform active:scale-95">
-          <i class="fa-solid fa-lock text-brand"></i> Finalize Selected Plan
+        <button onclick="scrollToSettlement()" class="bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 shadow-sm transition transform active:scale-95">
+          <i class="fa-solid fa-receipt text-brand"></i> Settlement Report
         </button>
       </div>
     </div>
 
-    <!-- Active Debts Banner (Shows only if debt exists) -->
+    <!-- Active Debts Banner -->
     <div id="activeDebtsContainer" class="hidden reveal-on-scroll bg-amber-50 dark:bg-amber-950/40 border-2 border-dashed border-amber-300 dark:border-amber-800/80 rounded-2xl p-4 shadow-sm space-y-2">
       <div class="flex items-center justify-between">
         <h3 class="text-xs uppercase font-extrabold tracking-wider text-amber-700 dark:text-amber-300 flex items-center gap-2">
@@ -180,42 +221,45 @@
       </div>
     </div>
 
-    <!-- Happiness Meter & 20% Buffer Radar -->
+    <!-- Happiness Speedometer & Jumbo Animated Piggy Bank -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-      <!-- Happiness & Feasibility Meter -->
-      <div class="reveal-on-scroll bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+      <!-- Happiness & Feasibility Speedometer Card -->
+      <div id="meterCard" onclick="triggerSpeedometerRev()" class="reveal-on-scroll bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between cursor-pointer hover:border-brand/60 transition group" title="Click anywhere on this card to rev the speedometer!">
         <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
           <div>
-            <h2 class="text-xs uppercase font-extrabold tracking-wider text-slate-400 dark:text-slate-500">Happiness & Feasibility Meter</h2>
+            <div class="flex items-center gap-2">
+              <h2 class="text-xs uppercase font-extrabold tracking-wider text-slate-400 dark:text-slate-500">Happiness & Feasibility Meter</h2>
+              <span class="bg-brand/10 text-brand text-[9px] font-extrabold px-1.5 py-0.2 rounded group-hover:scale-105 transition">Click to Rev</span>
+            </div>
             <div class="text-base font-bold text-slate-800 dark:text-slate-100 mt-0.5 flex items-center gap-2">
               <span id="meterVerdictText">Calculating...</span>
-              <span id="meterEmoji" class="text-2xl">😊</span>
+              <span id="meterEmoji" class="text-3xl transition-transform duration-150 inline-block">😊</span>
             </div>
           </div>
           <div class="text-right">
-            <span id="meterScoreNumber" class="text-3xl font-black text-brand tracking-tight">75%</span>
-            <div class="text-[10px] text-slate-400 font-bold uppercase">Index Score</div>
+            <span id="meterScoreNumber" class="text-3xl font-black text-brand tracking-tight font-mono">75%</span>
+            <div class="text-[10px] text-slate-400 font-bold uppercase">Tachometer Index</div>
           </div>
         </div>
 
-        <!-- SVG Semi-Circle Meter -->
+        <!-- SVG Semi-Circle Tachometer Meter -->
         <div class="py-4 flex flex-col items-center justify-center">
-          <div class="relative w-56 h-32 overflow-hidden flex justify-center">
-            <svg viewBox="0 0 200 110" class="w-full h-full">
-              <path d="M 20 90 A 80 80 0 0 1 180 90" fill="none" stroke="#e2e8f0" stroke-width="14" stroke-linecap="round" class="dark:stroke-slate-800" />
+          <div class="relative w-64 h-36 overflow-hidden flex justify-center">
+            <svg viewBox="0 0 200 110" class="w-full h-full drop-shadow-sm">
+              <path d="M 20 90 A 80 80 0 0 1 180 90" fill="none" stroke="#e2e8f0" stroke-width="16" stroke-linecap="round" class="dark:stroke-slate-800" />
               <defs>
                 <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                   <stop offset="0%" stop-color="#ef4444" />
-                  <stop offset="30%" stop-color="#f97316" />
-                  <stop offset="60%" stop-color="#eab308" />
-                  <stop offset="85%" stop-color="#1cc29f" />
+                  <stop offset="28%" stop-color="#f97316" />
+                  <stop offset="58%" stop-color="#eab308" />
+                  <stop offset="82%" stop-color="#1cc29f" />
                   <stop offset="100%" stop-color="#8b5cf6" />
                 </linearGradient>
               </defs>
-              <path id="gaugeProgressArc" d="M 20 90 A 80 80 0 0 1 180 90" fill="none" stroke="url(#gaugeGradient)" stroke-width="14" stroke-linecap="round" stroke-dasharray="251.2" stroke-dashoffset="62.8" style="transition: stroke-dashoffset 0.8s ease;" />
-              <circle cx="100" cy="90" r="7" fill="#0f172a" class="dark:fill-white" />
-              <line id="meterNeedle" x1="100" y1="90" x2="100" y2="25" stroke="#0f172a" stroke-width="3.5" stroke-linecap="round" class="dark:stroke-white" transform="rotate(45)" />
+              <path id="gaugeProgressArc" d="M 20 90 A 80 80 0 0 1 180 90" fill="none" stroke="url(#gaugeGradient)" stroke-width="16" stroke-linecap="round" stroke-dasharray="251.2" stroke-dashoffset="62.8" />
+              <circle cx="100" cy="90" r="8" fill="#0f172a" class="dark:fill-white" />
+              <line id="meterNeedle" x1="100" y1="90" x2="100" y2="24" stroke="#0f172a" stroke-width="4" stroke-linecap="round" class="dark:stroke-white" transform="rotate(-90)" />
             </svg>
           </div>
 
@@ -232,8 +276,8 @@
         </p>
       </div>
 
-      <!-- Emergency Buffer (Updated to 20%) -->
-      <div class="reveal-on-scroll bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+      <!-- Jumbo Animated Piggy Bank with Coin Drop -->
+      <div class="reveal-on-scroll bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between relative overflow-hidden">
         <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
           <div>
             <h2 class="text-xs uppercase font-extrabold tracking-wider text-slate-400 dark:text-slate-500">Emergency & Extra Buffer</h2>
@@ -244,14 +288,25 @@
           </span>
         </div>
 
-        <div class="my-auto py-5 flex items-center justify-between">
-          <div class="space-y-1">
+        <div class="my-auto py-5 flex items-center justify-between gap-4">
+          <div class="space-y-1 flex-1">
             <div class="text-xs text-slate-400 font-medium">Extra Cash Per Person to Carry</div>
-            <div class="text-3xl font-black text-amber-500" id="bufferShare">₹0</div>
-            <div class="text-[11px] text-slate-500 dark:text-slate-400">Total Group 20% Reserve: <strong id="bufferTotal" class="text-slate-800 dark:text-slate-200">₹0</strong></div>
+            <div class="text-3xl font-black text-amber-500 font-mono" id="bufferShare">₹0</div>
+            <div class="text-[11px] text-slate-500 dark:text-slate-400">
+              Total Group 20% Reserve: <strong id="bufferTotal" class="text-slate-800 dark:text-slate-200">₹0</strong>
+            </div>
           </div>
-          <div class="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-3xl shadow-sm">
-            <i class="fa-solid fa-piggy-bank"></i>
+
+          <!-- Jumbo Animated Piggy Container -->
+          <div class="relative w-28 h-28 flex flex-col items-center justify-center bg-gradient-to-br from-amber-50 to-amber-100/60 dark:from-amber-950/30 dark:to-amber-900/10 rounded-2xl border border-amber-200/70 dark:border-amber-800/40 p-2 shadow-inner">
+            <!-- Falling Coin Animation Element -->
+            <div class="absolute top-2 w-7 h-7 rounded-full bg-gradient-to-tr from-yellow-500 to-amber-300 border-2 border-amber-200 flex items-center justify-center text-amber-950 font-black text-xs shadow-md coin-drop-anim z-10 pointer-events-none">
+              ₹
+            </div>
+            <!-- Jumbo Piggy Bank Element with Gulp Effect -->
+            <div class="text-5xl text-amber-500 piggy-gulp-anim mt-3 filter drop-shadow-md">
+              <i class="fa-solid fa-piggy-bank"></i>
+            </div>
           </div>
         </div>
 
@@ -329,11 +384,11 @@
           <div class="my-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
             <div>
               <div class="text-[10px] font-bold uppercase text-slate-400">Total Bill</div>
-              <div class="text-xl font-black text-slate-900 dark:text-white" id="totalA">₹0</div>
+              <div class="text-xl font-black text-slate-900 dark:text-white font-mono" id="totalA">₹0</div>
             </div>
             <div class="text-right">
               <div class="text-[10px] font-extrabold text-brand uppercase">Average / Head</div>
-              <div class="text-xl font-black text-brand" id="perPersonA">₹0</div>
+              <div class="text-xl font-black text-brand font-mono" id="perPersonA">₹0</div>
             </div>
           </div>
 
@@ -362,11 +417,11 @@
           <div class="my-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
             <div>
               <div class="text-[10px] font-bold uppercase text-slate-400">Total Bill</div>
-              <div class="text-xl font-black text-slate-900 dark:text-white" id="totalB">₹0</div>
+              <div class="text-xl font-black text-slate-900 dark:text-white font-mono" id="totalB">₹0</div>
             </div>
             <div class="text-right">
               <div class="text-[10px] font-extrabold text-slate-500 uppercase">Average / Head</div>
-              <div class="text-xl font-black text-slate-700 dark:text-slate-300" id="perPersonB">₹0</div>
+              <div class="text-xl font-black text-slate-700 dark:text-slate-300 font-mono" id="perPersonB">₹0</div>
             </div>
           </div>
 
@@ -395,11 +450,11 @@
           <div class="my-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
             <div>
               <div class="text-[10px] font-bold uppercase text-slate-400">Total Bill</div>
-              <div class="text-xl font-black text-slate-900 dark:text-white" id="totalC">₹0</div>
+              <div class="text-xl font-black text-slate-900 dark:text-white font-mono" id="totalC">₹0</div>
             </div>
             <div class="text-right">
               <div class="text-[10px] font-extrabold text-purple-500 uppercase">Average / Head</div>
-              <div class="text-xl font-black text-purple-600 dark:text-purple-400" id="perPersonC">₹0</div>
+              <div class="text-xl font-black text-purple-600 dark:text-purple-400 font-mono" id="perPersonC">₹0</div>
             </div>
           </div>
 
@@ -445,6 +500,37 @@
       </div>
     </div>
 
+    <!-- POST-TRIP SETTLEMENT & PAID/UNPAID TRACKER -->
+    <div id="settlementSection" class="reveal-on-scroll bg-white dark:bg-slate-900 border-2 border-emerald-500/40 dark:border-emerald-500/30 rounded-2xl p-6 shadow-sm space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800 gap-2">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <h2 class="text-base font-bold text-slate-900 dark:text-white">
+              Post-Trip Settlement & Payment Status
+            </h2>
+          </div>
+          <p class="text-xs text-slate-400 mt-0.5">
+            Detailed report of who pays how much for <span id="settlementPlanTitle" class="font-bold text-brand">Option A</span>. Checkmark members as they complete payment.
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <div class="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl font-bold text-slate-600 dark:text-slate-300">
+            Collected: <span id="collectedAmountText" class="text-brand font-mono">₹0</span> / <span id="totalDueText" class="font-mono">₹0</span>
+          </div>
+          <button onclick="markAllPaid()" class="text-xs bg-brand text-white font-bold px-3 py-1.5 rounded-xl hover:bg-brand-dark transition shadow-sm">
+            Mark All Paid
+          </button>
+        </div>
+      </div>
+
+      <!-- Member Settlement Cards Container -->
+      <div id="settlementReportList" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-1">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
   </main>
 
   <!-- MODAL 1: Individual Member Ledgers Window -->
@@ -474,7 +560,7 @@
     </div>
   </div>
 
-  <!-- MODAL 2: Debt Transfer / Bailout Modal -->
+  <!-- MODAL 2: Debt Transfer Modal -->
   <div id="debtTransferModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-pop-in">
       <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
@@ -491,7 +577,7 @@
 
       <div class="space-y-4 pt-4 text-sm">
         <p class="text-xs text-slate-500 dark:text-slate-400">
-          If a member cannot pay their share upfront, transfer the amount to another member who sponsors them. The bill gets paid now, and an IOU debt is recorded.
+          If a member cannot pay their share upfront, transfer the amount to another member who sponsors them.
         </p>
 
         <div>
@@ -589,20 +675,20 @@
     // State
     let isDarkMode = false;
     let selectedScenario = 'A';
+    let currentNeedleAngle = -90;
+    let isSpeedometerRevving = false;
 
     let members = [
-      { id: 1, name: "You", active: true, color: "from-brand to-emerald-400" },
-      { id: 2, name: "Aarav", active: true, color: "from-blue-500 to-indigo-500" },
-      { id: 3, name: "Pooja", active: true, color: "from-pink-500 to-rose-500" },
-      { id: 4, name: "Rohan", active: true, color: "from-amber-500 to-orange-500" },
-      { id: 5, name: "Sneha", active: true, color: "from-purple-500 to-violet-500" },
-      { id: 6, name: "Vikram", active: true, color: "from-teal-500 to-cyan-500" }
+      { id: 1, name: "You", active: true, color: "from-brand to-emerald-400", paid: false },
+      { id: 2, name: "Aarav", active: true, color: "from-blue-500 to-indigo-500", paid: false },
+      { id: 3, name: "Pooja", active: true, color: "from-pink-500 to-rose-500", paid: false },
+      { id: 4, name: "Rohan", active: true, color: "from-amber-500 to-orange-500", paid: false },
+      { id: 5, name: "Sneha", active: true, color: "from-purple-500 to-violet-500", paid: false },
+      { id: 6, name: "Vikram", active: true, color: "from-teal-500 to-cyan-500", paid: false }
     ];
 
-    // Debts Structure: [{ id, debtorId, sponsorId, amount, note }]
     let debts = [];
 
-    // Expenses with exclusions
     let expensesScenarioA = [
       { id: 'a1', title: 'Luxury 4BHK Beach Villa', amount: 24000, icon: 'fa-hotel', excludedMembers: [] },
       { id: 'a2', title: 'Self-Drive SUV Rental & Fuel', amount: 9000, icon: 'fa-car', excludedMembers: [] },
@@ -624,7 +710,11 @@
       { id: 'c4', title: 'Go-Karting & Club Entry', amount: 5000, icon: 'fa-ticket', excludedMembers: [2] }
     ];
 
-    // Ultra-Smooth Theme Transition Curtain
+    function scrollToSettlement() {
+      document.getElementById('settlementSection').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Smooth Theme Curtain Transition
     function toggleDarkModeWithCurtain() {
       const curtain = document.getElementById('themeCurtain');
       curtain.className = !isDarkMode ? 'bg-slate-900 active' : 'bg-slate-100 active';
@@ -657,7 +747,6 @@
       return '₹' + Number(Math.round(amount)).toLocaleString('en-IN');
     }
 
-    // Select Scenario A, B, or C
     function selectScenario(scenario) {
       selectedScenario = scenario;
       ['A', 'B', 'C'].forEach(s => {
@@ -671,6 +760,7 @@
           badge.className = "bg-brand text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap";
           badge.innerText = "SELECTED";
           document.getElementById('selectedPlanIndicator').innerText = document.getElementById(`scenario${s}Name`).value;
+          document.getElementById('settlementPlanTitle').innerText = document.getElementById(`scenario${s}Name`).value;
         } else {
           card.className = "bg-white dark:bg-slate-900 border-2 rounded-2xl p-5 shadow-sm flex flex-col relative transition-all cursor-pointer border-slate-200 dark:border-slate-800 opacity-80 hover:opacity-100";
           badge.className = "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full whitespace-nowrap";
@@ -678,9 +768,9 @@
         }
       });
       recalculate();
+      triggerSpeedometerRev();
     }
 
-    // Direct In-Place Price Update
     function updateExpensePrice(scenario, id, newAmount) {
       const list = scenario === 'A' ? expensesScenarioA : (scenario === 'B' ? expensesScenarioB : expensesScenarioC);
       const expense = list.find(e => e.id === id);
@@ -690,7 +780,6 @@
       }
     }
 
-    // Member Roster Management
     function renderMembers() {
       const container = document.getElementById('memberList');
       container.innerHTML = '';
@@ -723,7 +812,6 @@
         container.appendChild(chip);
       });
 
-      // Update debt dropdowns
       updateDebtDropdowns();
     }
 
@@ -737,6 +825,7 @@
         }
         member.active = !member.active;
         recalculate();
+        triggerSpeedometerRev();
       }
     }
 
@@ -747,9 +836,10 @@
 
       const colors = ["from-pink-500 to-rose-500", "from-amber-500 to-orange-500", "from-teal-500 to-cyan-500", "from-indigo-500 to-purple-500", "from-emerald-500 to-teal-500"];
       const randomColor = colors[Math.floor(Math.random() * colors.length)];
-      members.push({ id: Date.now(), name: name, active: true, color: randomColor });
+      members.push({ id: Date.now(), name: name, active: true, color: randomColor, paid: false });
       input.value = '';
       recalculate();
+      triggerSpeedometerRev();
     }
 
     function removeMember(id) {
@@ -768,6 +858,7 @@
           expensesScenarioC.forEach(e => e.excludedMembers = e.excludedMembers.filter(mid => mid !== id));
           debts = debts.filter(d => d.debtorId !== id && d.sponsorId !== id);
           recalculate();
+          triggerSpeedometerRev();
         }, 250);
       }
     }
@@ -793,7 +884,6 @@
       recalculate();
     }
 
-    // Render Scenario Item Breakdown with In-Place Editable Price
     function renderBreakdown(scenario, items, containerId) {
       const container = document.getElementById(containerId);
       container.innerHTML = '';
@@ -838,7 +928,6 @@
               <span class="text-slate-800 dark:text-slate-200 font-bold truncate">${item.title}</span>
             </div>
             
-            <!-- In-Place Editable Price Input -->
             <div class="flex items-center gap-1.5">
               <span class="text-xs font-bold text-slate-400">₹</span>
               <input type="number" value="${item.amount}" 
@@ -873,11 +962,11 @@
           else if (scenario === 'B') expensesScenarioB = expensesScenarioB.filter(e => e.id !== id);
           else expensesScenarioC = expensesScenarioC.filter(e => e.id !== id);
           recalculate();
+          triggerSpeedometerRev();
         }, 250);
       }
     }
 
-    // Compute Itemized Personal Ledger for Each Person
     function calculateMemberShares(scenarioKey) {
       const activeMembers = members.filter(m => m.active);
       const chosenExpenses = scenarioKey === 'A' ? expensesScenarioA : (scenarioKey === 'B' ? expensesScenarioB : expensesScenarioC);
@@ -911,23 +1000,193 @@
         });
       });
 
-      // Apply Debts
       debts.forEach(d => {
         if (ledger[d.debtorId] && ledger[d.sponsorId]) {
           ledger[d.debtorId].debtTransferredOut += d.amount;
           ledger[d.sponsorId].debtSponsoredIn += d.amount;
-          
           ledger[d.debtorId].sponsoredDetails.push(`Debt: Covered by ${members.find(m => m.id === d.sponsorId)?.name} (-${formatINR(d.amount)})`);
           ledger[d.sponsorId].sponsoredDetails.push(`Bailout: Sponsoring ${members.find(m => m.id === d.debtorId)?.name} (+${formatINR(d.amount)})`);
         }
       });
 
-      // Final calculations
       Object.values(ledger).forEach(entry => {
         entry.finalShare = Math.max(0, entry.rawOwed - entry.debtTransferredOut + entry.debtSponsoredIn);
       });
 
       return ledger;
+    }
+
+    // SPEEDOMETER TACHOMETER SWEEP ENGINE
+    function triggerSpeedometerRev() {
+      if (isSpeedometerRevving) return;
+      isSpeedometerRevving = true;
+
+      const card = document.getElementById('meterCard');
+      card.classList.add('scale-[1.02]');
+      setTimeout(() => card.classList.remove('scale-[1.02]'), 400);
+
+      const activeTripMembers = members.filter(m => m.active);
+      const chosenExpenses = selectedScenario === 'A' ? expensesScenarioA : (selectedScenario === 'B' ? expensesScenarioB : expensesScenarioC);
+      const sum = chosenExpenses.reduce((acc, curr) => acc + curr.amount, 0);
+      const perHead = activeTripMembers.length > 0 ? sum / activeTripMembers.length : 0;
+
+      let targetScore = 100 - (perHead / 220);
+      if (targetScore < 5) targetScore = 5;
+      if (targetScore > 98) targetScore = 98;
+      targetScore = Math.round(targetScore);
+
+      let currentStep = 0;
+      const totalSteps = 45;
+      const stepDuration = 18;
+
+      const needleEl = document.getElementById('meterNeedle');
+      const arcEl = document.getElementById('gaugeProgressArc');
+      const scoreEl = document.getElementById('meterScoreNumber');
+      const emojiEl = document.getElementById('meterEmoji');
+      const textEl = document.getElementById('meterVerdictText');
+      const insightEl = document.getElementById('meterInsight');
+      const totalDash = 251.2;
+
+      const animInterval = setInterval(() => {
+        currentStep++;
+        const progress = currentStep / totalSteps;
+        // Ease-out cubic curve like a tachometer revving
+        const easedProgress = 1 - Math.pow(1 - progress, 3);
+        const dynamicScore = Math.round(easedProgress * targetScore);
+        const angle = -90 + (dynamicScore / 100) * 180;
+
+        needleEl.setAttribute('transform', `rotate(${angle})`);
+        arcEl.style.strokeDashoffset = totalDash - (totalDash * (dynamicScore / 100));
+        scoreEl.innerText = `${dynamicScore}%`;
+
+        // Dynamic emoji & verdict transitions during rev
+        if (dynamicScore < 30) {
+          emojiEl.innerText = "😢";
+          emojiEl.style.transform = "scale(1.15) rotate(-6deg)";
+          textEl.innerText = "Sad / Financial Stress";
+          textEl.className = "text-base font-bold text-rose-500";
+        } else if (dynamicScore < 60) {
+          emojiEl.innerText = "😐";
+          emojiEl.style.transform = "scale(1.1) rotate(0deg)";
+          textEl.innerText = "Moderate / Noticeable Pinch";
+          textEl.className = "text-base font-bold text-amber-500";
+        } else if (dynamicScore < 90) {
+          emojiEl.innerText = "😊";
+          emojiEl.style.transform = "scale(1.18) rotate(6deg)";
+          textEl.innerText = "Happy / Balanced & Fun";
+          textEl.className = "text-base font-bold text-emerald-500";
+        } else {
+          emojiEl.innerText = "🤩";
+          emojiEl.style.transform = "scale(1.25) rotate(12deg)";
+          textEl.innerText = "Amazing / Pure High Vibes";
+          textEl.className = "text-base font-bold text-purple-500";
+        }
+
+        if (currentStep >= totalSteps) {
+          clearInterval(animInterval);
+          isSpeedometerRevving = false;
+          emojiEl.style.transform = "scale(1)";
+
+          if (targetScore < 30) {
+            scoreEl.className = "text-3xl font-black text-rose-500 tracking-tight font-mono";
+            insightEl.innerText = "Per-person cost is high. Multiple members might feel the financial burden.";
+          } else if (targetScore <= 60) {
+            scoreEl.className = "text-3xl font-black text-amber-500 tracking-tight font-mono";
+            insightEl.innerText = "Balanced budget, but requires careful tracking of optional activities.";
+          } else if (targetScore <= 90) {
+            scoreEl.className = "text-3xl font-black text-brand tracking-tight font-mono";
+            insightEl.innerText = "Optimal sweet spot! Smooth consensus expected across the entire group.";
+          } else {
+            scoreEl.className = "text-3xl font-black text-purple-500 tracking-tight font-mono";
+            insightEl.innerText = "Super economical! Zero budget friction across all participants.";
+          }
+        }
+      }, stepDuration);
+    }
+
+    // Toggle Payment Status
+    function togglePayment(memberId) {
+      const member = members.find(m => m.id === memberId);
+      if (member) {
+        member.paid = !member.paid;
+        renderSettlementReport();
+      }
+    }
+
+    function markAllPaid() {
+      const activeMembers = members.filter(m => m.active);
+      const allAlreadyPaid = activeMembers.every(m => m.paid);
+      activeMembers.forEach(m => m.paid = !allAlreadyPaid);
+      renderSettlementReport();
+    }
+
+    // Post-Trip Settlement & Paid/Unpaid Tracker
+    function renderSettlementReport() {
+      const container = document.getElementById('settlementReportList');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const ledger = calculateMemberShares(selectedScenario);
+      let totalDue = 0;
+      let totalCollected = 0;
+
+      Object.values(ledger).forEach(item => {
+        totalDue += item.finalShare;
+        if (item.member.paid) {
+          totalCollected += item.finalShare;
+        }
+
+        const card = document.createElement('div');
+        card.className = `p-4 rounded-xl border transition-all animate-pop-in ${
+          item.member.paid 
+            ? 'bg-emerald-500/10 border-emerald-500/40 dark:bg-emerald-950/20 dark:border-emerald-800' 
+            : 'bg-slate-50 dark:bg-slate-800/40 border-slate-200 dark:border-slate-800'
+        }`;
+
+        let detailsString = item.activitiesIncluded.map(a => a.title).join(', ');
+        if (!detailsString) detailsString = "No shared activities";
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between pb-2 border-b border-slate-200/50 dark:border-slate-700/50">
+            <div class="flex items-center gap-2">
+              <span class="w-7 h-7 rounded-lg bg-gradient-to-tr ${item.member.color} text-white flex items-center justify-center text-xs font-black shadow-sm">
+                ${item.member.name.charAt(0).toUpperCase()}
+              </span>
+              <div>
+                <span class="font-bold text-slate-900 dark:text-white text-sm">${item.member.name}</span>
+                <div class="text-[10px] text-slate-400 truncate max-w-[140px]">${detailsString}</div>
+              </div>
+            </div>
+            <div class="text-right">
+              <span class="text-xs font-bold uppercase text-slate-400">Share Due</span>
+              <div class="text-base font-black text-slate-900 dark:text-white font-mono">${formatINR(item.finalShare)}</div>
+            </div>
+          </div>
+
+          <div class="pt-3 flex items-center justify-between">
+            <span class="text-xs font-bold flex items-center gap-1.5 ${
+              item.member.paid ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+            }">
+              <i class="fa-solid ${item.member.paid ? 'fa-circle-check' : 'fa-clock'}"></i>
+              ${item.member.paid ? 'Paid Full Share' : 'Payment Pending'}
+            </span>
+
+            <button onclick="togglePayment(${item.member.id})" class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+              item.member.paid 
+                ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm' 
+                : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-300 dark:hover:bg-slate-600'
+            }">
+              <i class="fa-solid ${item.member.paid ? 'fa-check' : 'fa-receipt'}"></i>
+              ${item.member.paid ? 'Paid' : 'Mark as Paid'}
+            </button>
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+
+      document.getElementById('totalDueText').innerText = formatINR(totalDue);
+      document.getElementById('collectedAmountText').innerText = formatINR(totalCollected);
     }
 
     // Core Recalculation Engine
@@ -958,17 +1217,12 @@
       document.getElementById('tableHeaderB').innerText = `${nameB} / Head`;
       document.getElementById('tableHeaderC').innerText = `${nameC} / Head`;
 
-      // 20% Contingency Reserve Fund Calculation
       const chosenSum = selectedScenario === 'A' ? sumA : (selectedScenario === 'B' ? sumB : sumC);
       const bufferTotal = Math.round(chosenSum * 0.20);
       const bufferPerPerson = activeCount > 0 ? Math.round(bufferTotal / activeCount) : 0;
 
       document.getElementById('bufferTotal').innerText = formatINR(bufferTotal);
       document.getElementById('bufferShare').innerText = `${formatINR(bufferPerPerson)} extra`;
-
-      // Happiness / Feasibility Meter
-      const chosenAvg = selectedScenario === 'A' ? perPersonA : (selectedScenario === 'B' ? perPersonB : perPersonC);
-      updateHappinessMeter(chosenAvg);
 
       renderMembers();
       renderBreakdown('A', expensesScenarioA, 'breakdownA');
@@ -977,57 +1231,9 @@
       renderSensitivity(sumA, sumB, sumC, activeCount);
       renderDebtsBanner();
       renderLedgerModalContent();
+      renderSettlementReport();
     }
 
-    // Happiness Meter (0 - 100%)
-    function updateHappinessMeter(costPerPerson) {
-      let score = 100 - (costPerPerson / 220);
-      if (score < 5) score = 5;
-      if (score > 98) score = 98;
-      score = Math.round(score);
-
-      const scoreEl = document.getElementById('meterScoreNumber');
-      const textEl = document.getElementById('meterVerdictText');
-      const emojiEl = document.getElementById('meterEmoji');
-      const needleEl = document.getElementById('meterNeedle');
-      const arcEl = document.getElementById('gaugeProgressArc');
-      const insightEl = document.getElementById('meterInsight');
-
-      scoreEl.innerText = `${score}%`;
-      const needleAngle = -90 + (score / 100) * 180;
-      needleEl.setAttribute('transform', `rotate(${needleAngle})`);
-
-      const totalDash = 251.2;
-      arcEl.style.strokeDashoffset = totalDash - (totalDash * (score / 100));
-
-      if (score < 30) {
-        textEl.innerText = "Sad / High Financial Stress";
-        textEl.className = "text-base font-bold text-rose-500";
-        emojiEl.innerText = "😢";
-        scoreEl.className = "text-3xl font-black text-rose-500 tracking-tight";
-        insightEl.innerText = "Per-person cost is high. Multiple members might feel the financial burden.";
-      } else if (score >= 30 && score <= 60) {
-        textEl.innerText = "Moderate / Noticeable Pinch";
-        textEl.className = "text-base font-bold text-amber-500";
-        emojiEl.innerText = "😐";
-        scoreEl.className = "text-3xl font-black text-amber-500 tracking-tight";
-        insightEl.innerText = "Balanced budget, but requires careful tracking of optional activities.";
-      } else if (score > 60 && score <= 90) {
-        textEl.innerText = "Happy / Balanced & Fun";
-        textEl.className = "text-base font-bold text-emerald-500";
-        emojiEl.innerText = "😊";
-        scoreEl.className = "text-3xl font-black text-brand tracking-tight";
-        insightEl.innerText = "Optimal sweet spot! Smooth consensus expected across the entire group.";
-      } else {
-        textEl.innerText = "Amazing / Pure High Vibes";
-        textEl.className = "text-base font-bold text-purple-500";
-        emojiEl.innerText = "🤩";
-        scoreEl.className = "text-3xl font-black text-purple-500 tracking-tight";
-        insightEl.innerText = "Super economical! Zero budget friction across all participants.";
-      }
-    }
-
-    // Sensitivity Matrix for A, B, and C
     function renderSensitivity(sumA, sumB, sumC, currentActive) {
       const tbody = document.getElementById('sensitivityTableBody');
       tbody.innerHTML = '';
@@ -1062,7 +1268,6 @@
       }
     }
 
-    // Render Individual Member Ledger Window
     function renderLedgerModalContent() {
       const container = document.getElementById('individualLedgerContent');
       if (!container) return;
@@ -1131,7 +1336,6 @@
       });
     }
 
-    // Debt Transfer System
     function updateDebtDropdowns() {
       const debtorSelect = document.getElementById('debtorSelect');
       const sponsorSelect = document.getElementById('sponsorSelect');
@@ -1212,7 +1416,6 @@
       recalculate();
     }
 
-    // Modal Handlers
     function openModal(id) {
       document.getElementById(id).classList.remove('hidden');
       if (id === 'individualLedgerModal') renderLedgerModalContent();
@@ -1249,38 +1452,13 @@
       document.getElementById('newExpenseAmount').value = '';
       closeModal('addExpenseModal');
       recalculate();
+      triggerSpeedometerRev();
     }
 
-    // Finalize Chosen Plan
-    function commitSelectedToSplitwise() {
-      const activeMembers = members.filter(m => m.active);
-      const chosenScenarioName = document.getElementById(`scenario${selectedScenario}Name`).value;
-      const ledger = calculateMemberShares(selectedScenario);
-
-      let individualBreakdown = '';
-      Object.values(ledger).forEach(item => {
-        individualBreakdown += `\n• ${item.member.name}: ${formatINR(item.finalShare)}`;
-        if (item.debtTransferredOut > 0) individualBreakdown += ` (Transferred debt: ${formatINR(item.debtTransferredOut)})`;
-        if (item.debtSponsoredIn > 0) individualBreakdown += ` (Sponsoring extra: +${formatINR(item.debtSponsoredIn)})`;
-      });
-
-      const bufferAmount = document.getElementById('bufferShare').innerText;
-      const happinessStatus = document.getElementById('meterVerdictText').innerText;
-
-      alert(
-        `🎉 PLAN LOCKED & FINALIZED FOR SPLITWISE!\n\n` +
-        `Selected Plan: ${chosenScenarioName}\n` +
-        `Happiness Feasibility: ${happinessStatus}\n` +
-        `20% Contingency Buffer: ${bufferAmount} per person\n\n` +
-        `Individual Upfront Payments (Exclusions & Debts Applied):${individualBreakdown}\n\n` +
-        `Official Splitwise balances and IOU debts are now synced!`
-      );
-    }
-
-    // Initialization
     window.addEventListener('DOMContentLoaded', () => {
       initScrollReveal();
       recalculate();
+      setTimeout(triggerSpeedometerRev, 350);
     });
   </script>
 </body>
