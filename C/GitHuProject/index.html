@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Splitwise - What-If Expense Simulator & Ledger</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              DEFAULT: '#1cc29f',
+              dark: '#149d80',
+              glow: '#2de2bb',
+              cardDark: '#1e293b',
+              bgDark: '#0b1120'
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    
+    * {
+      transition: background-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                  border-color 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                  color 0.3s ease, 
+                  box-shadow 0.4s ease;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+    }
+
+    /* Theme Curtain Transition Overlay */
+    #themeCurtain {
+      pointer-events: none;
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      opacity: 0;
+      clip-path: circle(0% at calc(100% - 40px) 32px);
+      transition: clip-path 0.65s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+    }
+    #themeCurtain.active {
+      opacity: 1;
+      clip-path: circle(150% at calc(100% - 40px) 32px);
+    }
+
+    @keyframes popIn {
+      0% { opacity: 0; transform: scale(0.85) translateY(12px); }
+      70% { transform: scale(1.02) translateY(-2px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    @keyframes slideOut {
+      0% { opacity: 1; transform: scale(1) translateX(0); max-height: 250px; margin-bottom: 0.5rem; }
+      100% { opacity: 0; transform: scale(0.85) translateX(30px); max-height: 0; margin-bottom: 0; padding: 0; }
+    }
+    @keyframes pulseAura {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(28, 194, 159, 0.4); }
+      50% { box-shadow: 0 0 20px 4px rgba(28, 194, 159, 0.25); }
+    }
+
+    .animate-pop-in {
+      animation: popIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    .animate-slide-out {
+      animation: slideOut 0.3s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+      overflow: hidden;
+    }
+    .selected-scenario-glow {
+      animation: pulseAura 3s infinite ease-in-out;
+    }
+
+    .reveal-on-scroll {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: opacity 0.6s cubic-bezier(0.16, 1, 0.3, 1), transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .reveal-on-scroll.is-visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    #meterNeedle {
+      transform-origin: 100px 90px;
+      transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 999px; }
+    .dark ::-webkit-scrollbar-thumb { background: #475569; }
+  </style>
+</head>
+
+<body class="bg-slate-100 text-slate-800 dark:bg-[#0b1120] dark:text-slate-100 min-h-screen flex flex-col selection:bg-brand selection:text-white">
+
+  <!-- Fullscreen Theme Radial Transition Curtain -->
+  <div id="themeCurtain" class="bg-slate-900"></div>
+
+  <!-- Header -->
+  <header class="bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="bg-gradient-to-tr from-[#1cc29f] to-[#2de2bb] text-white font-black rounded-xl w-9 h-9 flex items-center justify-center text-lg shadow-md shadow-brand/30">
+          S
+        </div>
+        <div class="flex flex-col">
+          <div class="flex items-center gap-2">
+            <span class="font-extrabold tracking-tight text-xl text-slate-900 dark:text-white">splitwise</span>
+            <span class="bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
+              🔮 What-If Simulator Pro
+            </span>
+          </div>
+          <span class="text-[11px] text-slate-400 font-medium">Per-Person Individual Ledger & Debt Bailout Engine</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <!-- View Personal Ledgers Modal Button -->
+        <button onclick="openModal('individualLedgerModal')" class="bg-brand/10 hover:bg-brand/20 text-brand border border-brand/30 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition transform active:scale-95 shadow-sm">
+          <i class="fa-solid fa-address-book"></i>
+          <span>Member Ledgers</span>
+        </button>
+
+        <!-- Transfer Debt Modal Button -->
+        <button onclick="openModal('debtTransferModal')" class="bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition transform active:scale-95 shadow-sm">
+          <i class="fa-solid fa-hand-holding-dollar"></i>
+          <span>Transfer Debt</span>
+        </button>
+
+        <!-- Theme Toggle -->
+        <button onclick="toggleDarkModeWithCurtain()" id="themeToggleBtn" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-amber-400 transition transform active:scale-95 shadow-sm" title="Toggle Theme">
+          <i class="fa-solid fa-moon text-sm"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto w-full px-4 py-6 flex-1 flex flex-col gap-8">
+
+    <!-- Plan Header -->
+    <div class="reveal-on-scroll bg-gradient-to-r from-white via-slate-50 to-white dark:from-slate-900 dark:via-slate-800/80 dark:to-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div class="space-y-1.5 flex-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <input id="planTitleInput" type="text" value="Goa Trip: Beach Villa vs Resort vs Custom Homestay" class="text-xl md:text-2xl font-black text-slate-900 dark:text-white border-b-2 border-dashed border-slate-300 dark:border-slate-700 hover:border-brand focus:border-brand focus:outline-none bg-transparent transition w-full max-w-xl" title="Click to rename this trip" />
+        </div>
+        <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+          Compare 3 custom plans, edit prices in real-time, inspect itemized member shares, and transfer unpaid amounts as debts.
+        </p>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2.5">
+        <button onclick="openModal('addExpenseModal')" class="bg-gradient-to-r from-brand to-[#15a385] text-white px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 shadow-lg shadow-brand/20 transition transform active:scale-95">
+          <i class="fa-solid fa-plus-circle text-sm"></i> Add Bill / Item
+        </button>
+        <button onclick="commitSelectedToSplitwise()" class="bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 shadow-sm transition transform active:scale-95">
+          <i class="fa-solid fa-lock text-brand"></i> Finalize Selected Plan
+        </button>
+      </div>
+    </div>
+
+    <!-- Active Debts Banner (Shows only if debt exists) -->
+    <div id="activeDebtsContainer" class="hidden reveal-on-scroll bg-amber-50 dark:bg-amber-950/40 border-2 border-dashed border-amber-300 dark:border-amber-800/80 rounded-2xl p-4 shadow-sm space-y-2">
+      <div class="flex items-center justify-between">
+        <h3 class="text-xs uppercase font-extrabold tracking-wider text-amber-700 dark:text-amber-300 flex items-center gap-2">
+          <i class="fa-solid fa-handshake-angle"></i> Active Debt Transfers & Sponsored Balances
+        </h3>
+        <button onclick="clearAllDebts()" class="text-[11px] text-amber-600 hover:underline font-bold">Clear All Debts</button>
+      </div>
+      <div id="debtsList" class="flex flex-wrap gap-2 pt-1">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- Happiness Meter & 20% Buffer Radar -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+      <!-- Happiness & Feasibility Meter -->
+      <div class="reveal-on-scroll bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+          <div>
+            <h2 class="text-xs uppercase font-extrabold tracking-wider text-slate-400 dark:text-slate-500">Happiness & Feasibility Meter</h2>
+            <div class="text-base font-bold text-slate-800 dark:text-slate-100 mt-0.5 flex items-center gap-2">
+              <span id="meterVerdictText">Calculating...</span>
+              <span id="meterEmoji" class="text-2xl">😊</span>
+            </div>
+          </div>
+          <div class="text-right">
+            <span id="meterScoreNumber" class="text-3xl font-black text-brand tracking-tight">75%</span>
+            <div class="text-[10px] text-slate-400 font-bold uppercase">Index Score</div>
+          </div>
+        </div>
+
+        <!-- SVG Semi-Circle Meter -->
+        <div class="py-4 flex flex-col items-center justify-center">
+          <div class="relative w-56 h-32 overflow-hidden flex justify-center">
+            <svg viewBox="0 0 200 110" class="w-full h-full">
+              <path d="M 20 90 A 80 80 0 0 1 180 90" fill="none" stroke="#e2e8f0" stroke-width="14" stroke-linecap="round" class="dark:stroke-slate-800" />
+              <defs>
+                <linearGradient id="gaugeGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stop-color="#ef4444" />
+                  <stop offset="30%" stop-color="#f97316" />
+                  <stop offset="60%" stop-color="#eab308" />
+                  <stop offset="85%" stop-color="#1cc29f" />
+                  <stop offset="100%" stop-color="#8b5cf6" />
+                </linearGradient>
+              </defs>
+              <path id="gaugeProgressArc" d="M 20 90 A 80 80 0 0 1 180 90" fill="none" stroke="url(#gaugeGradient)" stroke-width="14" stroke-linecap="round" stroke-dasharray="251.2" stroke-dashoffset="62.8" style="transition: stroke-dashoffset 0.8s ease;" />
+              <circle cx="100" cy="90" r="7" fill="#0f172a" class="dark:fill-white" />
+              <line id="meterNeedle" x1="100" y1="90" x2="100" y2="25" stroke="#0f172a" stroke-width="3.5" stroke-linecap="round" class="dark:stroke-white" transform="rotate(45)" />
+            </svg>
+          </div>
+
+          <div class="w-full max-w-xs flex justify-between text-[10px] font-bold text-slate-400 px-1 mt-1">
+            <span class="text-rose-500">0% Sad</span>
+            <span class="text-amber-500">30% Moderate</span>
+            <span class="text-emerald-500">60% Happy</span>
+            <span class="text-purple-500">90%-100% Amazing</span>
+          </div>
+        </div>
+
+        <p id="meterInsight" class="text-xs text-slate-500 dark:text-slate-400 text-center pt-2 border-t border-slate-100 dark:border-slate-800">
+          Calculating financial comfort for everyone attending...
+        </p>
+      </div>
+
+      <!-- Emergency Buffer (Updated to 20%) -->
+      <div class="reveal-on-scroll bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+          <div>
+            <h2 class="text-xs uppercase font-extrabold tracking-wider text-slate-400 dark:text-slate-500">Emergency & Extra Buffer</h2>
+            <div class="text-base font-bold text-slate-800 dark:text-slate-100 mt-0.5">Recommended Reserve Fund</div>
+          </div>
+          <span class="bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 text-[10px] font-extrabold px-2.5 py-1 rounded-full">
+            +20% Contingency
+          </span>
+        </div>
+
+        <div class="my-auto py-5 flex items-center justify-between">
+          <div class="space-y-1">
+            <div class="text-xs text-slate-400 font-medium">Extra Cash Per Person to Carry</div>
+            <div class="text-3xl font-black text-amber-500" id="bufferShare">₹0</div>
+            <div class="text-[11px] text-slate-500 dark:text-slate-400">Total Group 20% Reserve: <strong id="bufferTotal" class="text-slate-800 dark:text-slate-200">₹0</strong></div>
+          </div>
+          <div class="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-3xl shadow-sm">
+            <i class="fa-solid fa-piggy-bank"></i>
+          </div>
+        </div>
+
+        <div class="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200/60 dark:border-slate-800">
+          💡 <strong>Contingency Reserve:</strong> Provides a 20% cushion to shield individual budgets from unanticipated surge pricing, medical emergencies, or extra dining rounds.
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Group Members Attendance -->
+    <div class="reveal-on-scroll bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-4">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <h2 class="text-sm font-bold uppercase tracking-wider text-slate-800 dark:text-slate-200 flex items-center gap-2">
+            <i class="fa-solid fa-users text-brand"></i> Friends Roster & Attendance
+          </h2>
+          <p class="text-xs text-slate-400">Toggle a member off to simulate them dropping from the trip completely.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="openModal('individualLedgerModal')" class="text-xs text-brand hover:underline font-bold mr-2">
+            View Live Ledger & Shares →
+          </button>
+          <div class="text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300">
+            Attendees: <span id="attendingCount" class="font-black text-brand text-sm">0</span> / <span id="totalMembers">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add Friend Input -->
+      <div class="flex items-center gap-2 max-w-md">
+        <div class="relative w-full">
+          <i class="fa-solid fa-user-plus absolute left-3.5 top-3 text-xs text-slate-400"></i>
+          <input id="newMemberNameInput" type="text" placeholder="Add new friend (e.g. Siddharth, Priya)" class="w-full text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-slate-800 dark:text-slate-200 focus:outline-none focus:border-brand" onkeydown="if(event.key === 'Enter') addMember()" />
+        </div>
+        <button onclick="addMember()" class="bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-xs font-bold px-4 py-2.5 rounded-xl transition transform active:scale-95 whitespace-nowrap shadow-sm">
+          + Add
+        </button>
+      </div>
+
+      <!-- Members Roster Badges -->
+      <div id="memberList" class="flex flex-wrap gap-2.5 pt-1">
+        <!-- Injected via JavaScript -->
+      </div>
+    </div>
+
+    <!-- Scenarios: Compare Options A, B, and C -->
+    <div class="reveal-on-scroll space-y-4">
+      <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <i class="fa-solid fa-sliders text-brand"></i> Compare Options & In-Place Price Customizer
+          </h2>
+          <p class="text-xs text-slate-400">Edit any price directly in the input field, toggle exclusions per activity, and select the winning plan.</p>
+        </div>
+        <div class="text-xs font-bold text-slate-500">
+          Selected Plan: <span id="selectedPlanIndicator" class="text-brand font-black">Option A</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        <!-- SCENARIO A -->
+        <div id="cardScenarioA" onclick="selectScenario('A')" class="bg-white dark:bg-slate-900 border-2 rounded-2xl p-5 shadow-sm flex flex-col relative transition-all cursor-pointer border-brand selected-scenario-glow">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-2 w-full mr-2">
+              <input type="radio" name="scenarioSelect" id="radioA" checked onchange="selectScenario('A')" class="accent-brand w-4 h-4 cursor-pointer" />
+              <input id="scenarioAName" type="text" value="Option A: Luxury Stay" onclick="event.stopPropagation()" oninput="recalculate()" class="text-sm font-bold text-slate-900 dark:text-white border-b border-dashed border-slate-300 dark:border-slate-700 hover:border-brand focus:outline-none bg-transparent w-full" />
+            </div>
+            <span id="statusBadgeA" class="bg-brand text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap">
+              SELECTED
+            </span>
+          </div>
+
+          <div class="my-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+            <div>
+              <div class="text-[10px] font-bold uppercase text-slate-400">Total Bill</div>
+              <div class="text-xl font-black text-slate-900 dark:text-white" id="totalA">₹0</div>
+            </div>
+            <div class="text-right">
+              <div class="text-[10px] font-extrabold text-brand uppercase">Average / Head</div>
+              <div class="text-xl font-black text-brand" id="perPersonA">₹0</div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between mb-1.5">
+            <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Activities & Costs</h4>
+            <span class="text-[10px] text-slate-400 font-semibold" id="itemCountA">0 items</span>
+          </div>
+
+          <div id="breakdownA" class="space-y-2.5 flex-1 mb-2" onclick="event.stopPropagation()">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- SCENARIO B -->
+        <div id="cardScenarioB" onclick="selectScenario('B')" class="bg-white dark:bg-slate-900 border-2 rounded-2xl p-5 shadow-sm flex flex-col relative transition-all cursor-pointer border-slate-200 dark:border-slate-800 opacity-85 hover:opacity-100">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-2 w-full mr-2">
+              <input type="radio" name="scenarioSelect" id="radioB" onchange="selectScenario('B')" class="accent-brand w-4 h-4 cursor-pointer" />
+              <input id="scenarioBName" type="text" value="Option B: Budget Resort" onclick="event.stopPropagation()" oninput="recalculate()" class="text-sm font-bold text-slate-900 dark:text-white border-b border-dashed border-slate-300 dark:border-slate-700 hover:border-brand focus:outline-none bg-transparent w-full" />
+            </div>
+            <span id="statusBadgeB" class="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full whitespace-nowrap">
+              SELECT
+            </span>
+          </div>
+
+          <div class="my-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+            <div>
+              <div class="text-[10px] font-bold uppercase text-slate-400">Total Bill</div>
+              <div class="text-xl font-black text-slate-900 dark:text-white" id="totalB">₹0</div>
+            </div>
+            <div class="text-right">
+              <div class="text-[10px] font-extrabold text-slate-500 uppercase">Average / Head</div>
+              <div class="text-xl font-black text-slate-700 dark:text-slate-300" id="perPersonB">₹0</div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between mb-1.5">
+            <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Activities & Costs</h4>
+            <span class="text-[10px] text-slate-400 font-semibold" id="itemCountB">0 items</span>
+          </div>
+
+          <div id="breakdownB" class="space-y-2.5 flex-1 mb-2" onclick="event.stopPropagation()">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- SCENARIO C (Custom Option) -->
+        <div id="cardScenarioC" onclick="selectScenario('C')" class="bg-white dark:bg-slate-900 border-2 rounded-2xl p-5 shadow-sm flex flex-col relative transition-all cursor-pointer border-slate-200 dark:border-slate-800 opacity-85 hover:opacity-100">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-2 w-full mr-2">
+              <input type="radio" name="scenarioSelect" id="radioC" onchange="selectScenario('C')" class="accent-brand w-4 h-4 cursor-pointer" />
+              <input id="scenarioCName" type="text" value="Option C: Custom Plan" onclick="event.stopPropagation()" oninput="recalculate()" class="text-sm font-bold text-slate-900 dark:text-white border-b border-dashed border-slate-300 dark:border-slate-700 hover:border-brand focus:outline-none bg-transparent w-full" />
+            </div>
+            <span id="statusBadgeC" class="bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full whitespace-nowrap">
+              SELECT
+            </span>
+          </div>
+
+          <div class="my-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-800 flex items-center justify-between">
+            <div>
+              <div class="text-[10px] font-bold uppercase text-slate-400">Total Bill</div>
+              <div class="text-xl font-black text-slate-900 dark:text-white" id="totalC">₹0</div>
+            </div>
+            <div class="text-right">
+              <div class="text-[10px] font-extrabold text-purple-500 uppercase">Average / Head</div>
+              <div class="text-xl font-black text-purple-600 dark:text-purple-400" id="perPersonC">₹0</div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between mb-1.5">
+            <h4 class="text-[11px] font-bold uppercase tracking-wider text-slate-400">Activities & Costs</h4>
+            <span class="text-[10px] text-slate-400 font-semibold" id="itemCountC">0 items</span>
+          </div>
+
+          <div id="breakdownC" class="space-y-2.5 flex-1 mb-2" onclick="event.stopPropagation()">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Sensitivity & Dropout Risk Matrix -->
+    <div class="reveal-on-scroll bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm space-y-3">
+      <div class="flex items-center justify-between">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <i class="fa-solid fa-chart-pie text-brand"></i> Attendance Dropout Risk Matrix
+          </h2>
+          <p class="text-xs text-slate-400">Live comparison of averages across Option A, B, and C as friend count changes.</p>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr class="bg-slate-50 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
+              <th class="py-3 px-3 font-bold rounded-l-lg">Headcount</th>
+              <th class="py-3 px-3 font-bold" id="tableHeaderA">Option A / Head</th>
+              <th class="py-3 px-3 font-bold" id="tableHeaderB">Option B / Head</th>
+              <th class="py-3 px-3 font-bold" id="tableHeaderC">Option C / Head</th>
+              <th class="py-3 px-3 font-bold rounded-r-lg">Dropout Feasibility</th>
+            </tr>
+          </thead>
+          <tbody id="sensitivityTableBody" class="divide-y divide-slate-100 dark:divide-slate-800">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- MODAL 1: Individual Member Ledgers Window -->
+  <div id="individualLedgerModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-3xl w-full p-6 shadow-2xl animate-pop-in max-h-[85vh] flex flex-col">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div>
+          <h3 class="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <i class="fa-solid fa-address-book text-brand"></i> Member Personal Ledgers
+          </h3>
+          <p class="text-xs text-slate-400">Detailed breakdown showing activities each member is paying for, exclusions, and debt bailouts.</p>
+        </div>
+        <button onclick="closeModal('individualLedgerModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div id="individualLedgerContent" class="py-4 overflow-y-auto space-y-4 flex-1 custom-scrollbar">
+        <!-- Rendered dynamically -->
+      </div>
+
+      <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-end">
+        <button onclick="closeModal('individualLedgerModal')" class="px-5 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold text-xs">
+          Close Ledger
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Debt Transfer / Bailout Modal -->
+  <div id="debtTransferModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-pop-in">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center">
+            <i class="fa-solid fa-handshake"></i>
+          </div>
+          <h3 class="font-bold text-slate-900 dark:text-white">Transfer Unpaid Share as Debt</h3>
+        </div>
+        <button onclick="closeModal('debtTransferModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 pt-4 text-sm">
+        <p class="text-xs text-slate-500 dark:text-slate-400">
+          If a member cannot pay their share upfront, transfer the amount to another member who sponsors them. The bill gets paid now, and an IOU debt is recorded.
+        </p>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Friend Who Cannot Pay (Debtor)</label>
+          <select id="debtorSelect" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-brand">
+            <!-- Injected via JS -->
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Friend Who Will Cover It (Sponsor)</label>
+          <select id="sponsorSelect" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-brand">
+            <!-- Injected via JS -->
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Amount to Transfer (₹ INR)</label>
+          <input id="debtTransferAmount" type="number" placeholder="Leave empty to transfer their full share" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-brand" />
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3">
+          <button onclick="closeModal('debtTransferModal')" class="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            Cancel
+          </button>
+          <button onclick="createDebtTransfer()" class="px-5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 text-white rounded-xl font-bold shadow-lg shadow-amber-500/20 hover:opacity-95 transition transform active:scale-95">
+            Confirm Transfer
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Add Bill / Expense -->
+  <div id="addExpenseModal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl animate-pop-in">
+      <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center">
+            <i class="fa-solid fa-receipt"></i>
+          </div>
+          <h3 class="font-bold text-slate-900 dark:text-white">Add Simulated Expense / Activity</h3>
+        </div>
+        <button onclick="closeModal('addExpenseModal')" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+
+      <div class="space-y-4 pt-4 text-sm">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Expense Description</label>
+          <input id="newExpenseTitle" type="text" placeholder="e.g. Scuba Diving, Drinks, Fuel, Villa Rent" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-brand" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Total Bill Amount (₹ INR)</label>
+          <input id="newExpenseAmount" type="number" placeholder="6000" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-brand" />
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Category Icon</label>
+          <select id="newExpenseCategory" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-brand">
+            <option value="fa-ticket">🎟️ Activity / Tickets</option>
+            <option value="fa-hotel">🏨 Accommodation / Stay</option>
+            <option value="fa-utensils">🍽️ Food, Dining & Drinks</option>
+            <option value="fa-car">🚗 Vehicle / Taxi / Cab Rental</option>
+            <option value="fa-gas-pump">⛽ Fuel & Highway Tolls</option>
+            <option value="fa-receipt">🧾 Miscellaneous Expense</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1">Add To Which Option?</label>
+          <select id="newExpenseScenario" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:border-brand">
+            <option value="all">All Options (A, B, and C)</option>
+            <option value="A">Option A Only</option>
+            <option value="B">Option B Only</option>
+            <option value="C">Option C Only</option>
+          </select>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3">
+          <button onclick="closeModal('addExpenseModal')" class="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            Cancel
+          </button>
+          <button onclick="addCustomExpense()" class="px-5 py-2 bg-gradient-to-r from-brand to-emerald-600 text-white rounded-xl font-bold shadow-lg shadow-brand/20 hover:opacity-95 transition transform active:scale-95">
+            Add Bill
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // State
+    let isDarkMode = false;
+    let selectedScenario = 'A';
+
+    let members = [
+      { id: 1, name: "You", active: true, color: "from-brand to-emerald-400" },
+      { id: 2, name: "Aarav", active: true, color: "from-blue-500 to-indigo-500" },
+      { id: 3, name: "Pooja", active: true, color: "from-pink-500 to-rose-500" },
+      { id: 4, name: "Rohan", active: true, color: "from-amber-500 to-orange-500" },
+      { id: 5, name: "Sneha", active: true, color: "from-purple-500 to-violet-500" },
+      { id: 6, name: "Vikram", active: true, color: "from-teal-500 to-cyan-500" }
+    ];
+
+    // Debts Structure: [{ id, debtorId, sponsorId, amount, note }]
+    let debts = [];
+
+    // Expenses with exclusions
+    let expensesScenarioA = [
+      { id: 'a1', title: 'Luxury 4BHK Beach Villa', amount: 24000, icon: 'fa-hotel', excludedMembers: [] },
+      { id: 'a2', title: 'Self-Drive SUV Rental & Fuel', amount: 9000, icon: 'fa-car', excludedMembers: [] },
+      { id: 'a3', title: 'Seaside Dinner & Cocktails', amount: 12000, icon: 'fa-utensils', excludedMembers: [] },
+      { id: 'a4', title: 'Scuba Diving Session', amount: 8000, icon: 'fa-ticket', excludedMembers: [3] }
+    ];
+
+    let expensesScenarioB = [
+      { id: 'b1', title: 'Boutique Airbnb Homestay', amount: 15000, icon: 'fa-hotel', excludedMembers: [] },
+      { id: 'b2', title: 'Scooter Rentals (3 Activas)', amount: 4500, icon: 'fa-car', excludedMembers: [] },
+      { id: 'b3', title: 'Cafes & Seafood Hubs', amount: 8000, icon: 'fa-utensils', excludedMembers: [] },
+      { id: 'b4', title: 'Sunset Catamaran Cruise', amount: 4800, icon: 'fa-ticket', excludedMembers: [4] }
+    ];
+
+    let expensesScenarioC = [
+      { id: 'c1', title: 'Cozy Riverside Cottage', amount: 18000, icon: 'fa-hotel', excludedMembers: [] },
+      { id: 'c2', title: 'Self-Cook Grocery Stock & BBQ', amount: 6000, icon: 'fa-utensils', excludedMembers: [] },
+      { id: 'c3', title: 'Shared Minivan & Driver', amount: 7500, icon: 'fa-car', excludedMembers: [] },
+      { id: 'c4', title: 'Go-Karting & Club Entry', amount: 5000, icon: 'fa-ticket', excludedMembers: [2] }
+    ];
+
+    // Ultra-Smooth Theme Transition Curtain
+    function toggleDarkModeWithCurtain() {
+      const curtain = document.getElementById('themeCurtain');
+      curtain.className = !isDarkMode ? 'bg-slate-900 active' : 'bg-slate-100 active';
+
+      setTimeout(() => {
+        isDarkMode = !isDarkMode;
+        document.documentElement.classList.toggle('dark', isDarkMode);
+        const icon = document.querySelector('#themeToggleBtn i');
+        icon.className = isDarkMode ? 'fa-solid fa-sun text-sm text-amber-400' : 'fa-solid fa-moon text-sm text-slate-600';
+      }, 300);
+
+      setTimeout(() => {
+        curtain.classList.remove('active');
+      }, 700);
+    }
+
+    function initScrollReveal() {
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('is-visible');
+          }
+        });
+      }, { threshold: 0.1 });
+
+      document.querySelectorAll('.reveal-on-scroll').forEach(el => observer.observe(el));
+    }
+
+    function formatINR(amount) {
+      return '₹' + Number(Math.round(amount)).toLocaleString('en-IN');
+    }
+
+    // Select Scenario A, B, or C
+    function selectScenario(scenario) {
+      selectedScenario = scenario;
+      ['A', 'B', 'C'].forEach(s => {
+        const card = document.getElementById(`cardScenario${s}`);
+        const radio = document.getElementById(`radio${s}`);
+        const badge = document.getElementById(`statusBadge${s}`);
+
+        if (s === scenario) {
+          radio.checked = true;
+          card.className = "bg-white dark:bg-slate-900 border-2 rounded-2xl p-5 shadow-sm flex flex-col relative transition-all cursor-pointer border-brand selected-scenario-glow";
+          badge.className = "bg-brand text-white text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap";
+          badge.innerText = "SELECTED";
+          document.getElementById('selectedPlanIndicator').innerText = document.getElementById(`scenario${s}Name`).value;
+        } else {
+          card.className = "bg-white dark:bg-slate-900 border-2 rounded-2xl p-5 shadow-sm flex flex-col relative transition-all cursor-pointer border-slate-200 dark:border-slate-800 opacity-80 hover:opacity-100";
+          badge.className = "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full whitespace-nowrap";
+          badge.innerText = "SELECT";
+        }
+      });
+      recalculate();
+    }
+
+    // Direct In-Place Price Update
+    function updateExpensePrice(scenario, id, newAmount) {
+      const list = scenario === 'A' ? expensesScenarioA : (scenario === 'B' ? expensesScenarioB : expensesScenarioC);
+      const expense = list.find(e => e.id === id);
+      if (expense) {
+        expense.amount = Math.max(0, parseFloat(newAmount) || 0);
+        recalculate();
+      }
+    }
+
+    // Member Roster Management
+    function renderMembers() {
+      const container = document.getElementById('memberList');
+      container.innerHTML = '';
+      
+      const activeCount = members.filter(m => m.active).length;
+      document.getElementById('attendingCount').innerText = activeCount;
+      document.getElementById('totalMembers').innerText = members.length;
+
+      members.forEach(member => {
+        const chip = document.createElement('div');
+        chip.id = `member-chip-${member.id}`;
+        chip.className = `flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all transform duration-200 cursor-pointer animate-pop-in ${
+          member.active 
+            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-md shadow-brand/10' 
+            : 'bg-slate-200/80 text-slate-400 dark:bg-slate-800 dark:text-slate-600 opacity-60 line-through'
+        }`;
+
+        chip.innerHTML = `
+          <div onclick="toggleMember(${member.id})" class="flex items-center gap-2">
+            <span class="w-5 h-5 rounded-lg bg-gradient-to-tr ${member.color} text-white flex items-center justify-center text-[10px] font-black shadow-sm">
+              ${member.name.charAt(0).toUpperCase()}
+            </span>
+            <span>${member.name}</span>
+            <i class="fa-solid ${member.active ? 'fa-check text-brand' : 'fa-xmark text-slate-400'} text-[10px]"></i>
+          </div>
+          <button onclick="removeMember(${member.id})" class="ml-1 opacity-40 hover:opacity-100 hover:text-red-500 transition" title="Delete member">
+            <i class="fa-solid fa-circle-xmark"></i>
+          </button>
+        `;
+        container.appendChild(chip);
+      });
+
+      // Update debt dropdowns
+      updateDebtDropdowns();
+    }
+
+    function toggleMember(id) {
+      const member = members.find(m => m.id === id);
+      if (member) {
+        const activeCount = members.filter(m => m.active).length;
+        if (member.active && activeCount === 1) {
+          alert("At least 1 member must remain active.");
+          return;
+        }
+        member.active = !member.active;
+        recalculate();
+      }
+    }
+
+    function addMember() {
+      const input = document.getElementById('newMemberNameInput');
+      const name = input.value.trim();
+      if (!name) return;
+
+      const colors = ["from-pink-500 to-rose-500", "from-amber-500 to-orange-500", "from-teal-500 to-cyan-500", "from-indigo-500 to-purple-500", "from-emerald-500 to-teal-500"];
+      const randomColor = colors[Math.floor(Math.random() * colors.length)];
+      members.push({ id: Date.now(), name: name, active: true, color: randomColor });
+      input.value = '';
+      recalculate();
+    }
+
+    function removeMember(id) {
+      if (members.length <= 1) {
+        alert("The group needs at least one person.");
+        return;
+      }
+      const el = document.getElementById(`member-chip-${id}`);
+      if (el) {
+        el.classList.add('animate-slide-out');
+        setTimeout(() => {
+          members = members.filter(m => m.id !== id);
+          if (!members.some(m => m.active)) members[0].active = true;
+          expensesScenarioA.forEach(e => e.excludedMembers = e.excludedMembers.filter(mid => mid !== id));
+          expensesScenarioB.forEach(e => e.excludedMembers = e.excludedMembers.filter(mid => mid !== id));
+          expensesScenarioC.forEach(e => e.excludedMembers = e.excludedMembers.filter(mid => mid !== id));
+          debts = debts.filter(d => d.debtorId !== id && d.sponsorId !== id);
+          recalculate();
+        }, 250);
+      }
+    }
+
+    function toggleExpenseExclusion(scenario, expenseId, memberId) {
+      const list = scenario === 'A' ? expensesScenarioA : (scenario === 'B' ? expensesScenarioB : expensesScenarioC);
+      const expense = list.find(e => e.id === expenseId);
+      if (!expense) return;
+
+      if (!expense.excludedMembers) expense.excludedMembers = [];
+      const idx = expense.excludedMembers.indexOf(memberId);
+      if (idx > -1) {
+        expense.excludedMembers.splice(idx, 1);
+      } else {
+        const activeTripMembers = members.filter(m => m.active);
+        const currentlyIncluded = activeTripMembers.filter(m => !expense.excludedMembers.includes(m.id));
+        if (currentlyIncluded.length <= 1) {
+          alert("At least 1 active member must stay included in this bill.");
+          return;
+        }
+        expense.excludedMembers.push(memberId);
+      }
+      recalculate();
+    }
+
+    // Render Scenario Item Breakdown with In-Place Editable Price
+    function renderBreakdown(scenario, items, containerId) {
+      const container = document.getElementById(containerId);
+      container.innerHTML = '';
+      document.getElementById(`itemCount${scenario}`).innerText = `${items.length} items`;
+
+      if (items.length === 0) {
+        container.innerHTML = `<div class="text-xs text-slate-400 italic py-2 text-center">No bills added. Click "+ Add Bill" above.</div>`;
+        return;
+      }
+
+      const activeTripMembers = members.filter(m => m.active);
+
+      items.forEach(item => {
+        if (!item.excludedMembers) item.excludedMembers = [];
+        const participatingMembers = activeTripMembers.filter(m => !item.excludedMembers.includes(m.id));
+        const count = participatingMembers.length > 0 ? participatingMembers.length : 1;
+        const perPersonItemCost = Math.round(item.amount / count);
+
+        const card = document.createElement('div');
+        card.id = `bill-${scenario}-${item.id}`;
+        card.className = 'p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/80 dark:border-slate-800 space-y-2 animate-pop-in';
+
+        let memberTogglesHTML = '';
+        activeTripMembers.forEach(m => {
+          const isExcluded = item.excludedMembers.includes(m.id);
+          memberTogglesHTML += `
+            <button onclick="toggleExpenseExclusion('${scenario}', '${item.id}', ${m.id})" 
+              class="text-[9px] px-1.5 py-0.5 rounded font-semibold transition ${
+                isExcluded 
+                  ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 line-through border border-rose-200 dark:border-rose-900' 
+                  : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+              }">
+              ${m.name} ${isExcluded ? '✗' : '✓'}
+            </button>
+          `;
+        });
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between text-xs gap-2">
+            <div class="flex items-center gap-1.5 flex-1 min-w-0">
+              <i class="fa-solid ${item.icon} text-slate-400 text-[10px] w-3 text-center"></i>
+              <span class="text-slate-800 dark:text-slate-200 font-bold truncate">${item.title}</span>
+            </div>
+            
+            <!-- In-Place Editable Price Input -->
+            <div class="flex items-center gap-1.5">
+              <span class="text-xs font-bold text-slate-400">₹</span>
+              <input type="number" value="${item.amount}" 
+                oninput="updateExpensePrice('${scenario}', '${item.id}', this.value)"
+                class="w-20 text-right font-extrabold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg px-2 py-0.5 text-xs focus:outline-none focus:border-brand font-mono" />
+              <button onclick="deleteExpense('${scenario}', '${item.id}')" class="text-slate-400 hover:text-rose-500 transition ml-1" title="Delete">
+                <i class="fa-regular fa-trash-can text-xs"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-[10px] text-slate-400 pt-0.5 border-t border-slate-200/40 dark:border-slate-700/40">
+            <span>Split by ${count} friends</span>
+            <span class="font-bold text-brand font-mono">${formatINR(perPersonItemCost)} / person</span>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-1 pt-0.5">
+            ${memberTogglesHTML}
+          </div>
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    function deleteExpense(scenario, id) {
+      const el = document.getElementById(`bill-${scenario}-${id}`);
+      if (el) {
+        el.classList.add('animate-slide-out');
+        setTimeout(() => {
+          if (scenario === 'A') expensesScenarioA = expensesScenarioA.filter(e => e.id !== id);
+          else if (scenario === 'B') expensesScenarioB = expensesScenarioB.filter(e => e.id !== id);
+          else expensesScenarioC = expensesScenarioC.filter(e => e.id !== id);
+          recalculate();
+        }, 250);
+      }
+    }
+
+    // Compute Itemized Personal Ledger for Each Person
+    function calculateMemberShares(scenarioKey) {
+      const activeMembers = members.filter(m => m.active);
+      const chosenExpenses = scenarioKey === 'A' ? expensesScenarioA : (scenarioKey === 'B' ? expensesScenarioB : expensesScenarioC);
+      
+      const ledger = {};
+      activeMembers.forEach(m => {
+        ledger[m.id] = {
+          member: m,
+          rawOwed: 0,
+          activitiesIncluded: [],
+          activitiesExcluded: [],
+          debtTransferredOut: 0,
+          debtSponsoredIn: 0,
+          sponsoredDetails: [],
+          finalShare: 0
+        };
+      });
+
+      chosenExpenses.forEach(exp => {
+        const participating = activeMembers.filter(m => !exp.excludedMembers.includes(m.id));
+        const count = participating.length > 0 ? participating.length : 1;
+        const itemPerPerson = exp.amount / count;
+
+        activeMembers.forEach(m => {
+          if (!exp.excludedMembers.includes(m.id)) {
+            ledger[m.id].rawOwed += itemPerPerson;
+            ledger[m.id].activitiesIncluded.push({ title: exp.title, cost: itemPerPerson, total: exp.amount });
+          } else {
+            ledger[m.id].activitiesExcluded.push(exp.title);
+          }
+        });
+      });
+
+      // Apply Debts
+      debts.forEach(d => {
+        if (ledger[d.debtorId] && ledger[d.sponsorId]) {
+          ledger[d.debtorId].debtTransferredOut += d.amount;
+          ledger[d.sponsorId].debtSponsoredIn += d.amount;
+          
+          ledger[d.debtorId].sponsoredDetails.push(`Debt: Covered by ${members.find(m => m.id === d.sponsorId)?.name} (-${formatINR(d.amount)})`);
+          ledger[d.sponsorId].sponsoredDetails.push(`Bailout: Sponsoring ${members.find(m => m.id === d.debtorId)?.name} (+${formatINR(d.amount)})`);
+        }
+      });
+
+      // Final calculations
+      Object.values(ledger).forEach(entry => {
+        entry.finalShare = Math.max(0, entry.rawOwed - entry.debtTransferredOut + entry.debtSponsoredIn);
+      });
+
+      return ledger;
+    }
+
+    // Core Recalculation Engine
+    function recalculate() {
+      const activeTripMembers = members.filter(m => m.active);
+      const activeCount = activeTripMembers.length;
+
+      const sumA = expensesScenarioA.reduce((acc, curr) => acc + curr.amount, 0);
+      const sumB = expensesScenarioB.reduce((acc, curr) => acc + curr.amount, 0);
+      const sumC = expensesScenarioC.reduce((acc, curr) => acc + curr.amount, 0);
+
+      const perPersonA = activeCount > 0 ? sumA / activeCount : 0;
+      const perPersonB = activeCount > 0 ? sumB / activeCount : 0;
+      const perPersonC = activeCount > 0 ? sumC / activeCount : 0;
+
+      document.getElementById('totalA').innerText = formatINR(sumA);
+      document.getElementById('totalB').innerText = formatINR(sumB);
+      document.getElementById('totalC').innerText = formatINR(sumC);
+
+      document.getElementById('perPersonA').innerText = formatINR(perPersonA);
+      document.getElementById('perPersonB').innerText = formatINR(perPersonB);
+      document.getElementById('perPersonC').innerText = formatINR(perPersonC);
+
+      const nameA = document.getElementById('scenarioAName').value || 'Option A';
+      const nameB = document.getElementById('scenarioBName').value || 'Option B';
+      const nameC = document.getElementById('scenarioCName').value || 'Option C';
+      document.getElementById('tableHeaderA').innerText = `${nameA} / Head`;
+      document.getElementById('tableHeaderB').innerText = `${nameB} / Head`;
+      document.getElementById('tableHeaderC').innerText = `${nameC} / Head`;
+
+      // 20% Contingency Reserve Fund Calculation
+      const chosenSum = selectedScenario === 'A' ? sumA : (selectedScenario === 'B' ? sumB : sumC);
+      const bufferTotal = Math.round(chosenSum * 0.20);
+      const bufferPerPerson = activeCount > 0 ? Math.round(bufferTotal / activeCount) : 0;
+
+      document.getElementById('bufferTotal').innerText = formatINR(bufferTotal);
+      document.getElementById('bufferShare').innerText = `${formatINR(bufferPerPerson)} extra`;
+
+      // Happiness / Feasibility Meter
+      const chosenAvg = selectedScenario === 'A' ? perPersonA : (selectedScenario === 'B' ? perPersonB : perPersonC);
+      updateHappinessMeter(chosenAvg);
+
+      renderMembers();
+      renderBreakdown('A', expensesScenarioA, 'breakdownA');
+      renderBreakdown('B', expensesScenarioB, 'breakdownB');
+      renderBreakdown('C', expensesScenarioC, 'breakdownC');
+      renderSensitivity(sumA, sumB, sumC, activeCount);
+      renderDebtsBanner();
+      renderLedgerModalContent();
+    }
+
+    // Happiness Meter (0 - 100%)
+    function updateHappinessMeter(costPerPerson) {
+      let score = 100 - (costPerPerson / 220);
+      if (score < 5) score = 5;
+      if (score > 98) score = 98;
+      score = Math.round(score);
+
+      const scoreEl = document.getElementById('meterScoreNumber');
+      const textEl = document.getElementById('meterVerdictText');
+      const emojiEl = document.getElementById('meterEmoji');
+      const needleEl = document.getElementById('meterNeedle');
+      const arcEl = document.getElementById('gaugeProgressArc');
+      const insightEl = document.getElementById('meterInsight');
+
+      scoreEl.innerText = `${score}%`;
+      const needleAngle = -90 + (score / 100) * 180;
+      needleEl.setAttribute('transform', `rotate(${needleAngle})`);
+
+      const totalDash = 251.2;
+      arcEl.style.strokeDashoffset = totalDash - (totalDash * (score / 100));
+
+      if (score < 30) {
+        textEl.innerText = "Sad / High Financial Stress";
+        textEl.className = "text-base font-bold text-rose-500";
+        emojiEl.innerText = "😢";
+        scoreEl.className = "text-3xl font-black text-rose-500 tracking-tight";
+        insightEl.innerText = "Per-person cost is high. Multiple members might feel the financial burden.";
+      } else if (score >= 30 && score <= 60) {
+        textEl.innerText = "Moderate / Noticeable Pinch";
+        textEl.className = "text-base font-bold text-amber-500";
+        emojiEl.innerText = "😐";
+        scoreEl.className = "text-3xl font-black text-amber-500 tracking-tight";
+        insightEl.innerText = "Balanced budget, but requires careful tracking of optional activities.";
+      } else if (score > 60 && score <= 90) {
+        textEl.innerText = "Happy / Balanced & Fun";
+        textEl.className = "text-base font-bold text-emerald-500";
+        emojiEl.innerText = "😊";
+        scoreEl.className = "text-3xl font-black text-brand tracking-tight";
+        insightEl.innerText = "Optimal sweet spot! Smooth consensus expected across the entire group.";
+      } else {
+        textEl.innerText = "Amazing / Pure High Vibes";
+        textEl.className = "text-base font-bold text-purple-500";
+        emojiEl.innerText = "🤩";
+        scoreEl.className = "text-3xl font-black text-purple-500 tracking-tight";
+        insightEl.innerText = "Super economical! Zero budget friction across all participants.";
+      }
+    }
+
+    // Sensitivity Matrix for A, B, and C
+    function renderSensitivity(sumA, sumB, sumC, currentActive) {
+      const tbody = document.getElementById('sensitivityTableBody');
+      tbody.innerHTML = '';
+
+      const maxCount = Math.max(members.length, 6);
+      const minCount = Math.max(1, maxCount - 4);
+
+      for (let count = maxCount; count >= minCount; count--) {
+        const shareA = sumA / count;
+        const shareB = sumB / count;
+        const shareC = sumC / count;
+        const isCurrent = count === currentActive;
+
+        const row = document.createElement('tr');
+        row.className = isCurrent 
+          ? 'bg-brand/10 dark:bg-brand/20 font-black border-l-4 border-brand' 
+          : 'hover:bg-slate-50 dark:hover:bg-slate-800/40 text-slate-700 dark:text-slate-300';
+
+        row.innerHTML = `
+          <td class="py-3 px-3 flex items-center gap-1.5 font-bold">
+            <span>${count} Friends</span>
+            ${isCurrent ? '<span class="bg-brand text-white text-[9px] px-1.5 py-0.2 rounded font-black">ACTIVE</span>' : ''}
+          </td>
+          <td class="py-3 px-3 font-mono font-bold">${formatINR(shareA)}</td>
+          <td class="py-3 px-3 font-mono font-bold">${formatINR(shareB)}</td>
+          <td class="py-3 px-3 font-mono font-bold text-purple-600 dark:text-purple-400">${formatINR(shareC)}</td>
+          <td class="py-3 px-3 text-[11px]">
+            ${count < currentActive ? `<span class="text-rose-500 font-bold">⚠️ If ${currentActive - count} drops: +${formatINR(shareA - (sumA / currentActive))} on A</span>` : '<span class="text-emerald-500">✅ Expected group size</span>'}
+          </td>
+        `;
+        tbody.appendChild(row);
+      }
+    }
+
+    // Render Individual Member Ledger Window
+    function renderLedgerModalContent() {
+      const container = document.getElementById('individualLedgerContent');
+      if (!container) return;
+      container.innerHTML = '';
+
+      const ledger = calculateMemberShares(selectedScenario);
+      const planName = document.getElementById(`scenario${selectedScenario}Name`).value;
+
+      const headerSummary = document.createElement('div');
+      headerSummary.className = 'text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-200 dark:border-slate-700 mb-3 flex justify-between items-center';
+      headerSummary.innerHTML = `
+        <span>Ledger based on: <strong class="text-brand">${planName}</strong></span>
+        <span>Includes <strong>20% Buffer Advisor</strong></span>
+      `;
+      container.appendChild(headerSummary);
+
+      Object.values(ledger).forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800/40 space-y-3';
+
+        let activitiesHTML = item.activitiesIncluded.map(a => `
+          <div class="flex justify-between items-center text-xs text-slate-600 dark:text-slate-300 py-0.5">
+            <span>• ${a.title}</span>
+            <span class="font-mono font-semibold">${formatINR(a.cost)}</span>
+          </div>
+        `).join('');
+
+        let excludedHTML = item.activitiesExcluded.length > 0 ? `
+          <div class="text-[11px] text-rose-500 pt-1">
+            <strong>Opted Out:</strong> ${item.activitiesExcluded.join(', ')}
+          </div>
+        ` : '';
+
+        let debtsHTML = item.sponsoredDetails.map(d => `
+          <div class="text-xs font-bold ${d.startsWith('Debt:') ? 'text-amber-600 dark:text-amber-400' : 'text-blue-500'}">
+            ⚡ ${d}
+          </div>
+        `).join('');
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-slate-800">
+            <div class="flex items-center gap-2">
+              <span class="w-6 h-6 rounded-lg bg-gradient-to-tr ${item.member.color} text-white flex items-center justify-center text-xs font-black">
+                ${item.member.name.charAt(0).toUpperCase()}
+              </span>
+              <span class="font-bold text-slate-900 dark:text-white">${item.member.name}</span>
+            </div>
+            <div class="text-right">
+              <div class="text-[10px] text-slate-400 font-bold uppercase">To Pay Upfront</div>
+              <div class="text-lg font-black text-brand font-mono">${formatINR(item.finalShare)}</div>
+            </div>
+          </div>
+
+          <div class="space-y-1">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Itemized Cost Contributions:</div>
+            <div class="bg-slate-50 dark:bg-slate-900/50 p-2.5 rounded-lg border border-slate-100 dark:border-slate-800">
+              ${activitiesHTML || '<div class="text-xs text-slate-400 italic">No included activities.</div>'}
+              ${excludedHTML}
+            </div>
+          </div>
+
+          ${debtsHTML ? `<div class="pt-1">${debtsHTML}</div>` : ''}
+        `;
+
+        container.appendChild(card);
+      });
+    }
+
+    // Debt Transfer System
+    function updateDebtDropdowns() {
+      const debtorSelect = document.getElementById('debtorSelect');
+      const sponsorSelect = document.getElementById('sponsorSelect');
+      if (!debtorSelect || !sponsorSelect) return;
+
+      const activeTripMembers = members.filter(m => m.active);
+      debtorSelect.innerHTML = activeTripMembers.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+      sponsorSelect.innerHTML = activeTripMembers.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
+    }
+
+    function createDebtTransfer() {
+      const debtorId = parseInt(document.getElementById('debtorSelect').value);
+      const sponsorId = parseInt(document.getElementById('sponsorSelect').value);
+      const customAmount = parseFloat(document.getElementById('debtTransferAmount').value);
+
+      if (debtorId === sponsorId) {
+        alert("A member cannot sponsor their own debt!");
+        return;
+      }
+
+      const ledger = calculateMemberShares(selectedScenario);
+      const debtorShare = ledger[debtorId]?.finalShare || 0;
+      const transferAmount = (!isNaN(customAmount) && customAmount > 0) ? customAmount : debtorShare;
+
+      if (transferAmount <= 0) {
+        alert("This member currently has ₹0 to transfer.");
+        return;
+      }
+
+      debts.push({
+        id: 'debt_' + Date.now(),
+        debtorId: debtorId,
+        sponsorId: sponsorId,
+        amount: transferAmount
+      });
+
+      document.getElementById('debtTransferAmount').value = '';
+      closeModal('debtTransferModal');
+      recalculate();
+    }
+
+    function renderDebtsBanner() {
+      const container = document.getElementById('activeDebtsContainer');
+      const list = document.getElementById('debtsList');
+      if (!container || !list) return;
+
+      if (debts.length === 0) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      container.classList.remove('hidden');
+      list.innerHTML = '';
+
+      debts.forEach(d => {
+        const debtor = members.find(m => m.id === d.debtorId)?.name || 'Unknown';
+        const sponsor = members.find(m => m.id === d.sponsorId)?.name || 'Unknown';
+
+        const chip = document.createElement('div');
+        chip.className = 'flex items-center gap-2 bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 px-3 py-1.5 rounded-xl text-xs font-bold border border-amber-300 dark:border-amber-700 animate-pop-in';
+        chip.innerHTML = `
+          <span>💳 <strong>${debtor}</strong> owes <strong>${sponsor}</strong> ${formatINR(d.amount)}</span>
+          <button onclick="deleteDebt('${d.id}')" class="text-amber-500 hover:text-rose-500 ml-1">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        `;
+        list.appendChild(chip);
+      });
+    }
+
+    function deleteDebt(id) {
+      debts = debts.filter(d => d.id !== id);
+      recalculate();
+    }
+
+    function clearAllDebts() {
+      debts = [];
+      recalculate();
+    }
+
+    // Modal Handlers
+    function openModal(id) {
+      document.getElementById(id).classList.remove('hidden');
+      if (id === 'individualLedgerModal') renderLedgerModalContent();
+    }
+
+    function closeModal(id) {
+      document.getElementById(id).classList.add('hidden');
+    }
+
+    function addCustomExpense() {
+      const title = document.getElementById('newExpenseTitle').value.trim();
+      const amount = parseFloat(document.getElementById('newExpenseAmount').value);
+      const category = document.getElementById('newExpenseCategory').value;
+      const scenario = document.getElementById('newExpenseScenario').value;
+
+      if (!title || isNaN(amount) || amount <= 0) {
+        alert("Please enter a valid bill title and positive amount in INR (₹).");
+        return;
+      }
+
+      const item = {
+        id: 'c_' + Date.now(),
+        title: title,
+        amount: amount,
+        icon: category,
+        excludedMembers: []
+      };
+
+      if (scenario === 'all' || scenario === 'A') expensesScenarioA.push({ ...item });
+      if (scenario === 'all' || scenario === 'B') expensesScenarioB.push({ ...item });
+      if (scenario === 'all' || scenario === 'C') expensesScenarioC.push({ ...item });
+
+      document.getElementById('newExpenseTitle').value = '';
+      document.getElementById('newExpenseAmount').value = '';
+      closeModal('addExpenseModal');
+      recalculate();
+    }
+
+    // Finalize Chosen Plan
+    function commitSelectedToSplitwise() {
+      const activeMembers = members.filter(m => m.active);
+      const chosenScenarioName = document.getElementById(`scenario${selectedScenario}Name`).value;
+      const ledger = calculateMemberShares(selectedScenario);
+
+      let individualBreakdown = '';
+      Object.values(ledger).forEach(item => {
+        individualBreakdown += `\n• ${item.member.name}: ${formatINR(item.finalShare)}`;
+        if (item.debtTransferredOut > 0) individualBreakdown += ` (Transferred debt: ${formatINR(item.debtTransferredOut)})`;
+        if (item.debtSponsoredIn > 0) individualBreakdown += ` (Sponsoring extra: +${formatINR(item.debtSponsoredIn)})`;
+      });
+
+      const bufferAmount = document.getElementById('bufferShare').innerText;
+      const happinessStatus = document.getElementById('meterVerdictText').innerText;
+
+      alert(
+        `🎉 PLAN LOCKED & FINALIZED FOR SPLITWISE!\n\n` +
+        `Selected Plan: ${chosenScenarioName}\n` +
+        `Happiness Feasibility: ${happinessStatus}\n` +
+        `20% Contingency Buffer: ${bufferAmount} per person\n\n` +
+        `Individual Upfront Payments (Exclusions & Debts Applied):${individualBreakdown}\n\n` +
+        `Official Splitwise balances and IOU debts are now synced!`
+      );
+    }
+
+    // Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      initScrollReveal();
+      recalculate();
+    });
+  </script>
+</body>
+</html>
